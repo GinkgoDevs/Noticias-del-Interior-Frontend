@@ -20,16 +20,17 @@ export function ArticleCard({ category, title, excerpt, image, date, author, slu
   return (
     <Link
       href={`/noticia/${finalSlug}`}
-      className="group flex flex-col overflow-hidden transition-all duration-300 hover:translate-y-[-2px] relative"
+      className="group flex flex-col overflow-hidden transition-all duration-500 hover:-translate-y-1 relative"
     >
-      <div className="relative aspect-[16/10] overflow-hidden mb-4 md:mb-5 rounded-sm shadow-md group-hover:shadow-xl transition-shadow duration-300 bg-muted">
+      <div className="relative aspect-[16/10] overflow-hidden mb-4 md:mb-5 rounded-sm shadow-md group-hover:shadow-2xl transition-all duration-500 bg-muted">
         <Image
           src={image || "/placeholder.svg"}
           alt={title}
           fill
-          className="object-cover transition-transform duration-700 group-hover:scale-105"
+          className="object-cover transition-transform duration-1000 group-hover:scale-110"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="absolute inset-0 ring-1 ring-inset ring-black/10 group-hover:ring-black/20 transition-all duration-500 rounded-sm" />
       </div>
       <div className="flex flex-col flex-1">
         <Badge

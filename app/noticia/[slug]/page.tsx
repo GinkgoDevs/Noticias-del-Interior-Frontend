@@ -9,9 +9,12 @@ import { ListArticle } from "@/components/list-article"
 import { SocialShare } from "@/components/social-share"
 import { FacebookComments } from "@/components/facebook-comments"
 import { generateArticleMetadata, generateArticleJSONLD } from "@/components/article-metadata"
-import { Bookmark, Clock, User } from "lucide-react"
+import { Bookmark, Clock, User, ChevronRight, Home, Image as ImageIcon } from "lucide-react"
 import { fetchApi } from "@/lib/api-client"
 import { notFound } from "next/navigation"
+import { StickyArticleHeader } from "@/components/sticky-article-header"
+import { AdBanner } from "@/components/ad-banner"
+import { NewsletterForm } from "@/components/newsletter-form"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -95,24 +98,26 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     <div className="min-h-screen bg-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
+      <StickyArticleHeader title={article.title} category={article.category?.name || "Actualidad"} />
       <Header />
 
-      <main className="container mx-auto px-6 lg:px-8 py-12">
-        {/* Breadcrumbs */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-          <Link href="/" className="hover:text-foreground transition-colors">
+      <main className="container mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">
+        {/* Breadcrumbs Premium */}
+        <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground mb-8 md:mb-12 bg-muted/30 w-fit px-4 py-2 rounded-full border border-border/50">
+          <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1.5">
+            <Home className="h-3 w-3" />
             Inicio
           </Link>
-          <span>/</span>
+          <ChevronRight className="h-3 w-3 text-border" />
           {article.category && (
             <>
-              <Link href={`/${article.category.slug}`} className="hover:text-foreground transition-colors">
+              <Link href={`/${article.category.slug}`} className="hover:text-primary transition-colors">
                 {article.category.name}
               </Link>
-              <span>/</span>
+              <ChevronRight className="h-3 w-3 text-border" />
             </>
           )}
-          <span className="text-foreground">Artículo</span>
+          <span className="text-primary truncate max-w-[150px] md:max-w-xs">Noticia</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -177,11 +182,40 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
             )}
 
-            {/* Contenido del artículo */}
+            {/* Contenido del artículo Premium Typography */}
             <div
-              className="prose prose-lg max-w-none prose-slate"
-              dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br/>') }}
+              className="prose prose-lg md:prose-xl max-w-none dark:prose-invert prose-slate prose-headings:font-serif prose-headings:font-bold prose-p:leading-[1.8] prose-p:text-pretty prose-img:rounded-lg prose-article:mx-auto"
+              style={{
+                fontSize: '1.2rem',
+                lineHeight: '1.9',
+              }}
+              dangerouslySetInnerHTML={{ __html: article.content }}
             />
+
+            {/* Galería de Imágenes Premium */}
+            {article.images && article.images.length > 0 && (
+              <div className="mt-16 pt-12 border-t border-border/50">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="h-8 w-1 bg-primary rounded-full" />
+                  <h3 className="font-serif text-3xl font-bold flex items-center gap-2">
+                    <ImageIcon className="h-6 w-6 text-primary" /> Galería de Imágenes
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {article.images.map((img: any, i: number) => (
+                    <div key={i} className="group relative overflow-hidden rounded-xl border border-border bg-muted aspect-video shadow-sm hover:shadow-xl transition-all duration-500">
+                      <Image
+                        src={img.url}
+                        alt={`Galería ${i + 1}`}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Compartir en redes */}
             <Separator className="my-12" />
@@ -254,28 +288,19 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 </div>
               </div>
 
-              {/* Banner publicitario */}
-              <div className="bg-muted/50 border border-border p-8 text-center rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">PUBLICIDAD</p>
-                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-                  <span className="text-muted-foreground">300x300</span>
-                </div>
-              </div>
+              {/* Banner publicitario Dinámico */}
+              <AdBanner position="SIDEBAR" className="h-80 shadow-md" />
 
-              {/* Newsletter */}
-              <div className="bg-accent/50 p-8 border border-border rounded-lg">
-                <h3 className="font-serif text-2xl font-bold mb-4">Newsletter</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                  Recibe las noticias más importantes del interior argentino directamente en tu correo electrónico.
-                </p>
-                <div className="space-y-3">
-                  <input
-                    type="email"
-                    placeholder="tu@email.com"
-                    className="w-full px-4 py-2 rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <Button className="w-full rounded-full">Suscribirme</Button>
+              {/* Newsletter Premium */}
+              <div className="bg-primary/5 p-8 border-2 border-primary/10 rounded-lg relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+                  <Bookmark className="h-12 w-12 text-primary" />
                 </div>
+                <h3 className="font-serif text-2xl font-bold mb-4 relative z-10 text-primary">Newsletter</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                  Únete a más de 5.000 lectores y recibe lo mejor del interior en tu email.
+                </p>
+                <NewsletterForm />
               </div>
             </div>
           </aside>

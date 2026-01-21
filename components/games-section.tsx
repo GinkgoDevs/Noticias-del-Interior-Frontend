@@ -17,6 +17,13 @@ export function GamesSection() {
       href: "/juegos/sudoku",
       description: "Puzzle de números clásico",
     },
+    {
+      name: "Crucigrama",
+      difficulty: "Avanzado",
+      icon: "crucigrama",
+      href: "/juegos/crucigrama",
+      description: "Desafío de palabras diario",
+    },
   ]
 
   return (
@@ -64,6 +71,25 @@ export function GamesSection() {
                   <div className="bg-blue-500 text-white rounded-sm flex items-center justify-center">6</div>
                   <div className="bg-purple-500 text-white rounded-sm flex items-center justify-center">8</div>
                   <div className="bg-blue-500 text-white rounded-sm flex items-center justify-center">4</div>
+                </div>
+              )}
+              {game.icon === "crucigrama" && (
+                <div className="flex flex-col gap-0.5 w-10 h-10 md:w-12 md:h-12">
+                  <div className="flex gap-0.5 h-1/3">
+                    <div className="bg-orange-500 rounded-sm w-1/3"></div>
+                    <div className="bg-slate-200 rounded-sm w-1/3"></div>
+                    <div className="bg-orange-500 rounded-sm w-1/3"></div>
+                  </div>
+                  <div className="flex gap-0.5 h-1/3">
+                    <div className="bg-slate-200 rounded-sm w-1/3"></div>
+                    <div className="bg-orange-500 rounded-sm w-1/3"></div>
+                    <div className="bg-slate-200 rounded-sm w-1/3"></div>
+                  </div>
+                  <div className="flex gap-0.5 h-1/3">
+                    <div className="bg-orange-500 rounded-sm w-1/3"></div>
+                    <div className="bg-slate-200 rounded-sm w-1/3"></div>
+                    <div className="bg-orange-500 rounded-sm w-1/3"></div>
+                  </div>
                 </div>
               )}
             </div>

@@ -38,16 +38,27 @@ export const metadata: Metadata = {
   },
 }
 
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "sonner"
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} ${playfair.variable}`}>
-      <body className={`font-sans antialiased`}>
-        {children}
-        <Analytics />
+    <html lang="es" className={`${inter.variable} ${playfair.variable}`} suppressHydrationWarning>
+      <body className={`font-sans antialiased text-foreground bg-background`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster position="top-center" richColors />
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   )

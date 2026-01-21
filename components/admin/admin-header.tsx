@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { LogOut, Eye } from "lucide-react"
 import { signOut } from "@/lib/auth"
 import Link from "next/link"
+import { ModeToggle } from "@/components/mode-toggle"
 
 interface AdminHeaderProps {
   userProfile: {
@@ -38,9 +39,9 @@ export function AdminHeader({ userProfile }: AdminHeaderProps) {
     : userProfile.email[0].toUpperCase()
 
   return (
-    <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6">
+    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
-        <h2 className="text-lg font-semibold text-slate-900">Panel de Administración</h2>
+        <h2 className="text-lg font-semibold">Panel de Administración</h2>
       </div>
 
       <div className="flex items-center gap-4">
@@ -50,6 +51,8 @@ export function AdminHeader({ userProfile }: AdminHeaderProps) {
             Ver Sitio
           </Link>
         </Button>
+
+        <ModeToggle />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

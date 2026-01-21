@@ -22,8 +22,8 @@ export default async function CategoriesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Categorías</h1>
-          <p className="text-slate-600 mt-1">Organiza tus noticias por categorías</p>
+          <h1 className="text-3xl font-bold tracking-tight">Categorías</h1>
+          <p className="text-muted-foreground mt-1">Organiza tus noticias por categorías</p>
         </div>
         <CreateCategoryDialog />
       </div>

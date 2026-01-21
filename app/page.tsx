@@ -1,12 +1,15 @@
 import { Header } from "@/components/header"
-import { HeroNews } from "@/components/hero-news"
+import Image from "next/image"
+import { HeroCarousel } from "@/components/hero-carousel"
 import { FeaturedCard } from "@/components/featured-card"
 import { ArticleCard } from "@/components/article-card"
 import { ListArticle } from "@/components/list-article"
 import { GamesSection } from "@/components/games-section"
+import { AdBanner } from "@/components/ad-banner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { fetchApi } from "@/lib/api-client"
+import { NewsletterForm } from "@/components/newsletter-form"
 import Link from "next/link"
 
 export const dynamic = "force-dynamic"
@@ -29,9 +32,9 @@ export default async function Home() {
     console.error("Error fetching news:", error);
   }
 
-  // Distribute news
-  const heroItem = news[0];
-  const featuredItems = news.slice(1, 3);
+  // Intelligence: All news with 'featured' from TODAY will be in the carousel
+  // For now, let's take the first 3 (which are sorted by that priority in backend)
+  const carouselItems = news.slice(0, 3);
   const remainingArticles = news.slice(3);
 
   const formatDate = (dateString: string) => {
@@ -48,41 +51,17 @@ export default async function Home() {
 
       <main>
         <section className="mb-12 md:mb-16">
-          {heroItem ? (
-            <HeroNews
-              category={heroItem.category?.name || "Actualidad"}
-              title={heroItem.title}
-              excerpt={heroItem.excerpt}
-              image={heroItem.mainImageUrl || "/placeholder.svg"}
-              date={formatDate(heroItem.publishedAt)}
-              author={heroItem.author?.name || "Redacción NDI"}
-              slug={heroItem.slug}
-            />
+          {carouselItems.length > 0 ? (
+            <HeroCarousel items={carouselItems} />
           ) : (
             <div className="h-[500px] flex items-center justify-center bg-muted">
-              <p className="text-muted-foreground">No hay noticias destacadas</p>
+              <p className="text-muted-foreground">No hay noticias hoy</p>
             </div>
           )}
         </section>
 
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <section className="mb-16 md:mb-20">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-              {featuredItems.map((article: any, index: number) => (
-                <FeaturedCard
-                  key={article.id || index}
-                  category={article.category?.name || "Actualidad"}
-                  title={article.title}
-                  excerpt={article.excerpt}
-                  image={article.mainImageUrl || "/placeholder.svg"}
-                  date={formatDate(article.publishedAt)}
-                  author={article.author?.name || "Redacción NDI"}
-                  slug={article.slug}
-                  size="large"
-                />
-              ))}
-            </div>
-          </section>
+          <AdBanner position="HEADER" className="mt-8 h-32 md:h-40 mb-16 md:mb-20" />
 
           <GamesSection />
 
@@ -140,7 +119,7 @@ export default async function Home() {
                   <h3 className="font-serif text-xl md:text-2xl font-bold mb-5 md:mb-6 pb-3 border-b-2 border-primary/20">
                     Lo más leído
                   </h3>
-                  <div>
+                  <div className="space-y-6">
                     {trending.length > 0 ? (
                       trending.map((item: any, index: number) => (
                         <ListArticle
@@ -153,9 +132,11 @@ export default async function Home() {
                         />
                       ))
                     ) : (
-                      <p className="text-sm text-muted-foreground">Cargando noticias populares...</p>
+                      <p className="text-muted-foreground text-sm italic">No hay noticias populares hoy</p>
                     )}
                   </div>
+
+                  <AdBanner position="SIDEBAR" className="mt-10 h-64" />
                 </div>
 
                 {/* Newsletter */}
@@ -164,12 +145,7 @@ export default async function Home() {
                   <p className="text-sm text-muted-foreground leading-[1.6] mb-5 md:mb-6">
                     Recibe las noticias más importantes del interior argentino directamente en tu correo electrónico.
                   </p>
-                  <div className="space-y-3">
-                    <Input type="email" placeholder="tu@email.com" className="bg-background" />
-                    <Button className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
-                      Suscribirme
-                    </Button>
-                  </div>
+                  <NewsletterForm />
                 </div>
 
                 {/* Seguir */}
@@ -217,7 +193,22 @@ export default async function Home() {
           <div className="container mx-auto px-4 md:px-6 lg:px-8 py-12 md:py-16">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 mb-8 md:mb-12">
               <div className="md:col-span-12 lg:col-span-5">
-                <h3 className="font-serif text-xl md:text-2xl font-bold mb-3 md:mb-4">Noticias del Interior</h3>
+                <div className="mb-6">
+                  <Image
+                    src="/logo-claro.png"
+                    alt="Noticias del Interior"
+                    width={200}
+                    height={70}
+                    className="object-contain dark:hidden"
+                  />
+                  <Image
+                    src="/logo-oscuro.png"
+                    alt="Noticias del Interior"
+                    width={200}
+                    height={70}
+                    className="object-contain hidden dark:block"
+                  />
+                </div>
                 <p className="text-sm text-muted-foreground leading-[1.6] max-w-md">
                   El portal de noticias más completo del interior argentino. Información verificada, actualizada y de
                   calidad sobre política, deportes, economía y más.
@@ -288,7 +279,7 @@ export default async function Home() {
             </div>
           </div>
         </footer>
-      </main>
-    </div>
+      </main >
+    </div >
   )
 }

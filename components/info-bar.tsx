@@ -30,9 +30,12 @@ export function InfoBar() {
   const [dollarRates, setDollarRates] = useState<DollarRate[]>([])
   const [weather, setWeather] = useState<{ temp: number | null; city: string }>({ temp: null, city: "Tucumán" })
   const [isLoading, setIsLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
+    setIsMounted(true)
+    setSelectedDate(new Date())
     const updateDateTime = () => {
       const now = new Date()
       setCurrentTime(
@@ -201,33 +204,41 @@ export function InfoBar() {
 
             <div className="h-4 w-px bg-border/50" />
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-transparent hover:border-border/50 hover:bg-muted/40 transition-all outline-none group">
-                        <CalendarIcon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        <span className="text-xs font-bold text-foreground/80 capitalize">{currentDate}</span>
-                        <ChevronDown className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-transform group-data-[state=open]:rotate-180" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 border-border/50 shadow-2xl" align="end">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={handleDateSelect}
-                        initialFocus
-                        className="bg-background"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="font-medium">
-                  Ver archivo de noticias por fecha
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {isMounted ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-transparent hover:border-border/50 hover:bg-muted/40 transition-all outline-none group">
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <span className="text-xs font-bold text-foreground/80 capitalize">{currentDate}</span>
+                          <ChevronDown className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-transform group-data-[state=open]:rotate-180" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 border-border/50 shadow-2xl" align="end">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={handleDateSelect}
+                          initialFocus
+                          className="bg-background"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="font-medium">
+                    Ver archivo de noticias por fecha
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <button className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-transparent transition-all outline-none group">
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-bold text-foreground/80 capitalize">{currentDate}</span>
+                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              </button>
+            )}
 
             <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-muted/40 border border-border/50">
               <Clock className="h-3.5 w-3.5 text-primary" />

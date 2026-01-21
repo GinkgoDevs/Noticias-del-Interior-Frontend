@@ -19,13 +19,13 @@ export function HeroNews({ category, title, excerpt, image, date, author, contex
   const finalSlug = slug || generateSlug(title)
 
   return (
-    <Link href={`/noticia/${finalSlug}`} className="group relative flex flex-col justify-center h-[calc(100vh-150px)] min-h-[550px] md:min-h-[600px] w-full overflow-hidden bg-black">
+    <Link href={`/noticia/${finalSlug}`} className="group relative flex flex-col justify-end h-[500px] md:h-[650px] w-full overflow-hidden bg-black pb-12 md:pb-24">
       {/* Background Image - Absolute */}
       <Image
         src={image || "/placeholder.svg"}
         alt={title}
         fill
-        className="object-cover transition-all duration-1000 group-hover:scale-105 group-hover:opacity-90"
+        className="object-cover transition-all duration-[2000ms] ease-out group-hover:scale-110 group-hover:opacity-80 group-hover:blur-[2px]"
         priority
       />
 
@@ -34,8 +34,8 @@ export function HeroNews({ category, title, excerpt, image, date, author, contex
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent" />
       {/* Removed: <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-transparent lg:from-black/70" /> */}
 
-      {/* Content - Centered for immediate impact */}
-      <div className="relative z-10 w-full pt-10 md:pt-20">
+      {/* Content - Positioned at bottom with better spacing */}
+      <div className="relative z-10 w-full">
         <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-5xl">
           <div className="animate-fade-up">
             <Badge className="mb-4 md:mb-6 bg-primary text-primary-foreground font-bold uppercase tracking-[0.2em] text-[10px] md:text-xs px-4 md:px-5 py-1.5 md:py-2 hover:bg-primary/90 shadow-2xl rounded-none">

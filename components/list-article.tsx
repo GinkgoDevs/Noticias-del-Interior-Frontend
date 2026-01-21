@@ -17,7 +17,7 @@ export function ListArticle({ category, title, date, number, slug }: ListArticle
   return (
     <Link
       href={`/noticia/${finalSlug}`}
-      className="group flex gap-3 md:gap-4 py-4 md:py-5 border-b border-border/50 last:border-0 transition-all hover:bg-accent/30 px-3 md:px-4 -mx-3 md:-mx-4 rounded-sm"
+      className="group flex gap-3 md:gap-4 py-4 md:py-5 border-b border-border/50 last:border-0 transition-all duration-500 hover:bg-primary/5 hover:translate-x-1 px-3 md:px-4 -mx-3 md:-mx-4 rounded-sm"
     >
       {number && (
         <div className="flex-shrink-0">

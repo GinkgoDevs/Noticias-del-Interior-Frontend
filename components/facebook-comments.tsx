@@ -48,7 +48,8 @@ export function FacebookComments({ url, numPosts = 10 }: FacebookCommentsProps) 
     }
   }, [url])
 
-  const fullUrl = typeof window !== "undefined" ? window.location.origin + url : url
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://noticiasdelinterior.com.ar"
+  const fullUrl = `${siteUrl}${url}`
 
   return (
     <div ref={containerRef} className="fb-comments-container">

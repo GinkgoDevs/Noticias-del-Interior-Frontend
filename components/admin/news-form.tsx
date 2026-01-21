@@ -4,21 +4,34 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { fetchApi, API_URL } from "@/lib/api-client"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2 } from "lucide-react"
+import { Loader2, Globe, FileText, Image as ImageIcon, Star, Clock, Trash2, Plus, Eye } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import dynamic from "next/dynamic"
+import "react-quill-new/dist/quill.snow.css"
+import { SEOPreview } from "./seo-preview"
+
+const ReactQuill = dynamic(() => import("react-quill-new"), {
+  ssr: false,
+  loading: () => <div className="h-[300px] w-full bg-muted animate-pulse rounded-md" />,
+})
 
 interface NewsFormProps {
   categories: any[]
+  tags?: any[]
   initialData?: any
 }
 
-export function NewsForm({ categories, initialData }: NewsFormProps) {
+export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -32,7 +45,15 @@ export function NewsForm({ categories, initialData }: NewsFormProps) {
     mainImageId: initialData?.mainImageId || initialData?.main_image_id || "",
     categoryId: initialData?.category?.id || initialData?.categoryId || "",
     status: (initialData?.status || "draft").toLowerCase(),
+    featured: initialData?.featured || false,
+    scheduledAt: initialData?.scheduledAt || "",
+    seoTitle: initialData?.seoTitle || "",
+    seoDescription: initialData?.seoDescription || "",
+    tagIds: initialData?.tags?.map((t: any) => t.id) || [],
+    images: initialData?.images || [],
   })
+  const [isScheduled, setIsScheduled] = useState(!!initialData?.scheduledAt)
+  const [showPreview, setShowPreview] = useState(false)
 
   const generateSlug = (title: string) => {
     return title
@@ -87,6 +108,53 @@ export function NewsForm({ categories, initialData }: NewsFormProps) {
     } finally {
       setUploading(false);
     }
+  }
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadedImages: any[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', files[i]);
+
+        const response = await fetch(`${API_URL}/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: formDataUpload
+        });
+
+        if (!response.ok) throw new Error('Error al subir una de las imágenes');
+
+        const res = await response.json();
+        const payload = res.data;
+        uploadedImages.push({
+          url: payload.url,
+          publicId: payload.publicId,
+          position: formData.images.length + i
+        });
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...uploadedImages]
+      }));
+    } catch (err: any) {
+      setError("Error al subir imágenes a la galería: " + (err.message || ""));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const removeGalleryImage = (publicId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((img: any) => img.publicId !== publicId)
+    }));
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -167,37 +235,162 @@ export function NewsForm({ categories, initialData }: NewsFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Contenido *</Label>
-            <Textarea
-              id="content"
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="Contenido completo de la noticia"
-              rows={12}
-              required
-            />
+            <Label>Contenido *</Label>
+            <div className="min-h-[400px] border rounded-md overflow-hidden bg-white text-black">
+              <ReactQuill
+                theme="snow"
+                value={formData.content}
+                onChange={(content) => setFormData({ ...formData, content })}
+                modules={{
+                  toolbar: [
+                    [{ header: [1, 2, 3, false] }],
+                    ["bold", "italic", "underline", "strike"],
+                    [{ list: "ordered" }, { list: "bullet" }],
+                    ["link", "image"],
+                    ["clean"],
+                  ],
+                }}
+                className="h-[350px]"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Usa el editor para dar formato a tu noticia.</p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="image">Imagen destacada</Label>
-            <div className="flex items-center gap-4">
-              <Input
-                id="image"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                disabled={uploading}
-                className="flex-1"
-              />
-              {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
-            </div>
-            {formData.mainImageUrl && (
-              <div className="mt-2">
-                <img
-                  src={formData.mainImageUrl || "/placeholder.svg"}
-                  alt="Preview"
-                  className="h-32 w-auto rounded-lg border"
+          <Separator className="my-8" />
+
+          <SEOPreview
+            title={formData.title}
+            slug={formData.slug}
+            excerpt={formData.excerpt}
+            seoTitle={formData.seoTitle}
+            seoDescription={formData.seoDescription}
+          />
+
+          <div className="bg-primary/5 p-4 rounded-lg border border-primary/10 space-y-4">
+            <h4 className="text-sm font-bold flex items-center gap-2 text-primary">
+              <Globe className="h-4 w-4" /> Personalización SEO (Opcional)
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="seoTitle" className="text-xs">Título SEO</Label>
+                <Input
+                  id="seoTitle"
+                  value={formData.seoTitle}
+                  onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
+                  placeholder="Personaliza el título para buscadores"
+                  className="h-8 text-sm"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="seoDescription" className="text-xs">Descripción SEO</Label>
+                <Textarea
+                  id="seoDescription"
+                  value={formData.seoDescription}
+                  onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
+                  placeholder="Personaliza la meta-descripción"
+                  className="min-h-[32px] text-sm py-1"
+                  rows={1}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Label>Imagen destacada principal</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploading}
+                    className="flex-1 cursor-pointer"
+                  />
+                  {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
+                <p className="text-xs text-muted-foreground">Esta imagen aparecerá en los listados y en la cabecera de la noticia.</p>
+              </div>
+
+              {formData.mainImageUrl && (
+                <div className="relative group rounded-lg border overflow-hidden bg-muted aspect-video">
+                  <img
+                    src={formData.mainImageUrl || "/placeholder.svg"}
+                    alt="Preview"
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setFormData({ ...formData, mainImageUrl: '', mainImageId: '' })}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-bold flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5 text-primary" /> Galería de Imágenes
+                </Label>
+                <p className="text-xs text-muted-foreground">Añade fotos adicionales para crear una galería dentro de la nota.</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => document.getElementById('gallery-upload')?.click()}
+                disabled={uploading}
+              >
+                <Plus className="h-4 w-4 mr-2" /> Añadir Fotos
+              </Button>
+              <input
+                id="gallery-upload"
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={handleGalleryUpload}
+              />
+            </div>
+
+            {formData.images.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {formData.images.map((img: any, index: number) => (
+                  <div key={img.publicId || index} className="relative group rounded-lg border overflow-hidden aspect-square bg-muted">
+                    <img
+                      src={img.url}
+                      alt={`Gallery ${index}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => removeGalleryImage(img.publicId)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground bg-muted/20">
+                <ImageIcon className="h-10 w-10 mb-2 opacity-20" />
+                <p className="text-sm">No hay imágenes en la galería</p>
               </div>
             )}
           </div>
@@ -225,8 +418,12 @@ export function NewsForm({ categories, initialData }: NewsFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="status">Estado *</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                <SelectTrigger>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value })}
+                disabled={isScheduled}
+              >
+                <SelectTrigger className={cn(isScheduled && "bg-muted cursor-not-allowed opacity-70")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -235,19 +432,170 @@ export function NewsForm({ categories, initialData }: NewsFormProps) {
                   <SelectItem value="archived">Archivado</SelectItem>
                 </SelectContent>
               </Select>
+              {isScheduled && (
+                <p className="text-[10px] text-orange-600 font-medium">
+                  Bloqueado en Borrador para programación.
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-4 pt-4">
-            <Button type="submit" disabled={loading || uploading}>
-              {loading ? "Guardando..." : initialData ? "Actualizar Noticia" : "Crear Noticia"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
-              Cancelar
+          <div className="space-y-4 border-t pt-6">
+            <Label className="flex items-center gap-2">
+              <Star className="h-4 w-4" /> Etiquetas (Tags)
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {tags?.map((tag: any) => {
+                const isSelected = formData.tagIds.includes(tag.id)
+                return (
+                  <Badge
+                    key={tag.id}
+                    variant={isSelected ? "default" : "outline"}
+                    className={cn(
+                      "cursor-pointer px-3 py-1 transition-all",
+                      isSelected
+                        ? "bg-primary text-primary-foreground scale-105 shadow-sm"
+                        : "hover:bg-muted text-muted-foreground opacity-70 hover:opacity-100"
+                    )}
+                    onClick={() => {
+                      const newTagIds = isSelected
+                        ? formData.tagIds.filter((id: string) => id !== tag.id)
+                        : [...formData.tagIds, tag.id]
+                      setFormData({ ...formData, tagIds: newTagIds })
+                    }}
+                  >
+                    {tag.name}
+                  </Badge>
+                )
+              })}
+              {(!tags || tags.length === 0) && (
+                <p className="text-xs text-muted-foreground italic">No hay etiquetas disponibles.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center space-x-2 bg-primary/5 p-4 rounded-lg border border-primary/20">
+              <Switch
+                id="featured"
+                checked={formData.featured}
+                onCheckedChange={(checked) => setFormData({ ...formData, featured: checked })}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="featured" className="flex items-center gap-2 cursor-pointer">
+                  <Star className={cn("h-4 w-4", formData.featured ? "fill-primary text-primary" : "text-muted-foreground")} />
+                  Noticia Destacada (Hero)
+                </Label>
+                <p className="text-xs text-muted-foreground line-clamp-1">
+                  Aparecerá en el encabezado principal de la Home.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 p-4 rounded-lg bg-orange-50/50 border border-orange-200">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isScheduled"
+                  checked={isScheduled}
+                  onCheckedChange={(checked) => {
+                    setIsScheduled(checked)
+                    if (checked) {
+                      setFormData({ ...formData, status: "draft" })
+                    }
+                  }}
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="isScheduled" className="flex items-center gap-2 cursor-pointer font-bold text-orange-700">
+                    <Clock className="h-4 w-4" />
+                    Programar Noticia
+                  </Label>
+                  <p className="text-xs text-orange-600 line-clamp-1">
+                    Publicación automática en fecha/hora.
+                  </p>
+                </div>
+              </div>
+
+              {isScheduled && (
+                <div className="animate-in slide-in-from-top-2 duration-300">
+                  <Input
+                    type="datetime-local"
+                    value={formData.scheduledAt ? formData.scheduledAt.substring(0, 16) : ""}
+                    onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })}
+                    className="bg-white border-orange-200 focus:ring-orange-500 h-8 text-xs"
+                    min={new Date().toISOString().substring(0, 16)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 pt-4 border-t">
+            <div className="flex items-center gap-4">
+              <Button type="submit" disabled={loading || uploading} className={cn(isScheduled && "bg-orange-600 hover:bg-orange-700")}>
+                {loading ? "Guardando..." :
+                  isScheduled ? "Programar Noticia" :
+                    initialData ? "Actualizar Noticia" : "Crear Noticia"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
+                Cancelar
+              </Button>
+            </div>
+
+            <Button type="button" variant="secondary" onClick={() => setShowPreview(true)} className="flex items-center gap-2">
+              <Eye className="h-4 w-4" /> Vista Previa
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Previsualización */}
+      {showPreview && (
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-in fade-in duration-300">
+          <header className="h-16 border-b flex items-center justify-between px-6 bg-card shrink-0">
+            <div className="flex items-center gap-4">
+              <Badge variant="outline" className="uppercase tracking-widest text-[10px]">Previsualización</Badge>
+              <h2 className="font-bold truncate max-w-[400px]">{formData.title || 'Sin título'}</h2>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
+              Cerrar Previsualización
+            </Button>
+          </header>
+
+          <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950">
+            <div className="max-w-4xl mx-auto bg-white dark:bg-card min-h-full shadow-xl p-6 md:p-12">
+              <div className="space-y-6">
+                <Badge className="bg-primary">{categories.find(c => c.id === formData.categoryId)?.name || 'Categoría'}</Badge>
+                <h1 className="text-4xl md:text-5xl font-serif font-bold leading-tight">{formData.title || 'Título de la Noticia'}</h1>
+                <p className="text-xl text-muted-foreground font-medium italic border-l-4 border-primary pl-4">{formData.excerpt}</p>
+
+                {formData.mainImageUrl && (
+                  <img src={formData.mainImageUrl} className="w-full rounded-xl shadow-lg border" alt="Main" />
+                )}
+
+                <div className="prose prose-lg dark:prose-invert max-w-none ql-editor !p-0" dangerouslySetInnerHTML={{ __html: formData.content }} />
+
+                {formData.images.length > 0 && (
+                  <div className="mt-12 space-y-4">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="h-6 w-1 bg-primary rounded-full" />
+                      <h3 className="text-xl font-bold flex items-center gap-2">
+                        <ImageIcon className="h-5 w-5 text-primary" /> Galería de Imágenes
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {formData.images.map((img: any, i: number) => (
+                        <div key={i} className="relative aspect-video rounded-lg overflow-hidden border shadow-sm bg-muted">
+                          <img src={img.url} className="w-full h-full object-cover" alt="Gallery" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   )
 }
