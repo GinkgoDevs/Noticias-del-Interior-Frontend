@@ -1,6 +1,5 @@
 import Image from "next/image"
 import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
 import { Clock, User } from "lucide-react"
 import { generateSlug } from "@/lib/utils"
 
@@ -20,45 +19,32 @@ export function ArticleCard({ category, title, excerpt, image, date, author, slu
   return (
     <Link
       href={`/noticia/${finalSlug}`}
-      className="group flex flex-col overflow-hidden transition-all duration-500 hover:-translate-y-1 relative"
+      className="group flex flex-col overflow-hidden relative"
     >
-      <div className="relative aspect-[16/10] overflow-hidden mb-4 md:mb-5 rounded-sm shadow-md group-hover:shadow-2xl transition-all duration-500 bg-muted">
+      <div className="aspect-video rounded-xl overflow-hidden mb-4 bg-surface-dark relative">
         <Image
           src={image || "/placeholder.svg"}
           alt={title}
           fill
-          className="object-cover transition-transform duration-1000 group-hover:scale-110"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        <div className="absolute inset-0 ring-1 ring-inset ring-black/10 group-hover:ring-black/20 transition-all duration-500 rounded-sm" />
-      </div>
-      <div className="flex flex-col flex-1">
-        <Badge
-          variant="outline"
-          className="mb-2 md:mb-3 w-fit font-bold uppercase tracking-widest text-[10px] border-foreground/30 text-foreground px-3 py-1"
-        >
-          {category}
-        </Badge>
-        <h3 className="font-serif text-lg md:text-xl lg:text-2xl font-bold text-foreground leading-[1.3] mb-2 md:mb-3 text-balance group-hover:text-foreground/70 transition-colors">
-          {title}
-        </h3>
-        {excerpt && (
-          <p className="text-sm text-muted-foreground line-clamp-3 leading-[1.6] flex-1 mb-3 md:mb-4 text-pretty">
-            {excerpt}
-          </p>
-        )}
-        <div className="flex flex-wrap items-center gap-3 md:gap-4 text-xs text-muted-foreground pt-3 border-t border-border/50">
-          {author && (
-            <div className="flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5" />
-              <span className="font-semibold">Por {author}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5" />
-            <time className="uppercase tracking-wider font-medium">{date}</time>
-          </div>
+        <div className="absolute top-3 left-3">
+          <span className="bg-primary/90 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-lg uppercase">
+            {category}
+          </span>
         </div>
+      </div>
+      <h3 className="text-xl font-bold leading-tight mb-3 line-clamp-2 font-display">
+        {title}
+      </h3>
+      {excerpt && (
+        <p className="text-muted-foreground text-sm mb-4 line-clamp-3 leading-relaxed font-light">
+          {excerpt}
+        </p>
+      )}
+      <div className="flex items-center text-[10px] text-muted-foreground mt-auto pt-2 font-medium border-t border-border/50">
+        <Clock className="h-3 w-3 mr-1.5 text-primary/70" />
+        <time className="uppercase tracking-[0.1em]">{date}</time>
       </div>
     </Link>
   )

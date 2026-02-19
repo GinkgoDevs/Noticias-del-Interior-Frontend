@@ -98,8 +98,8 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
                                 key={index}
                                 onClick={() => emblaApi?.scrollTo(index)}
                                 className={`h-1.5 transition-all duration-500 rounded-full ${index === selectedIndex
-                                        ? "w-10 bg-primary shadow-[0_0_15px_oklch(var(--primary))]"
-                                        : "w-2 bg-white/20 hover:bg-white/50"
+                                    ? "w-10 bg-primary shadow-[0_0_15px_oklch(var(--primary))]"
+                                    : "w-2 bg-white/20 hover:bg-white/50"
                                     }`}
                             />
                         ))}

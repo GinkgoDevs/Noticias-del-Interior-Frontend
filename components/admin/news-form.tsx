@@ -14,11 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Globe, FileText, Image as ImageIcon, Star, Clock, Trash2, Plus, Eye } from "lucide-react"
+import { Loader2, Globe, FileText, Image as ImageIcon, Star, Clock, Trash2, Plus, Eye, Type } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import dynamic from "next/dynamic"
 import "react-quill-new/dist/quill.snow.css"
 import { SEOPreview } from "./seo-preview"
+import { uploadImageAction } from "@/lib/actions"
 
 const ReactQuill = dynamic(() => import("react-quill-new"), {
   ssr: false,
@@ -43,6 +44,7 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
     excerpt: initialData?.excerpt || "",
     mainImageUrl: initialData?.mainImageUrl || initialData?.main_image_url || "",
     mainImageId: initialData?.mainImageId || initialData?.main_image_id || "",
+    mainImageCaption: initialData?.mainImageCaption || "",
     categoryId: initialData?.category?.id || initialData?.categoryId || "",
     status: (initialData?.status || "draft").toLowerCase(),
     featured: initialData?.featured || false,
@@ -83,24 +85,14 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
       const formDataUpload = new FormData();
       formDataUpload.append('file', file);
 
-      // Using the NestJS upload service
-      const response = await fetch(`${API_URL}/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formDataUpload
-      });
+      const res = await uploadImageAction(formDataUpload);
 
-      if (!response.ok) throw new Error('Error al subir la imagen');
-
-      const res = await response.json();
-      const payload = res.data; // { url, publicId } from ApiResponse
+      if (!res.success) throw new Error(res.message);
 
       setFormData((prev) => ({
         ...prev,
-        mainImageUrl: payload.url,
-        mainImageId: payload.publicId
+        mainImageUrl: res.data.url,
+        mainImageId: res.data.publicId
       }));
     } catch (err: any) {
       setError("Error al subir la imagen: " + (err.message || ""));
@@ -120,21 +112,13 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
         const formDataUpload = new FormData();
         formDataUpload.append('file', files[i]);
 
-        const response = await fetch(`${API_URL}/upload`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: formDataUpload
-        });
+        const res = await uploadImageAction(formDataUpload);
 
-        if (!response.ok) throw new Error('Error al subir una de las imágenes');
+        if (!res.success) throw new Error(res.message || 'Error al subir una de las imágenes');
 
-        const res = await response.json();
-        const payload = res.data;
         uploadedImages.push({
-          url: payload.url,
-          publicId: payload.publicId,
+          url: res.data.url,
+          publicId: res.data.publicId,
           position: formData.images.length + i
         });
       }
@@ -162,9 +146,23 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
     setLoading(true)
     setError(null)
 
-    const payload = {
+    const payload: any = {
       ...formData,
       status: formData.status.toUpperCase(),
+    }
+
+    // Limpiar scheduledAt si no está activado el switch o si es una cadena vacía
+    if (!isScheduled || !formData.scheduledAt) {
+      payload.scheduledAt = null;
+    } else {
+      try {
+        // Asegurar formato ISO 8601 completo
+        payload.scheduledAt = new Date(formData.scheduledAt).toISOString();
+      } catch (e) {
+        setError("Fecha de programación inválida");
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -314,21 +312,32 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
               </div>
 
               {formData.mainImageUrl && (
-                <div className="relative group rounded-lg border overflow-hidden bg-muted aspect-video">
-                  <img
-                    src={formData.mainImageUrl || "/placeholder.svg"}
-                    alt="Preview"
-                    className="h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setFormData({ ...formData, mainImageUrl: '', mainImageId: '' })}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" /> Eliminar
-                    </Button>
+                <div className="space-y-2">
+                  <div className="relative group rounded-lg border overflow-hidden bg-muted aspect-video">
+                    <img
+                      src={formData.mainImageUrl || "/placeholder.svg"}
+                      alt="Preview"
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setFormData({ ...formData, mainImageUrl: '', mainImageId: '', mainImageCaption: '' })}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Type className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <Input
+                      value={formData.mainImageCaption}
+                      onChange={(e) => setFormData({ ...formData, mainImageCaption: e.target.value })}
+                      placeholder="Pie de foto: Ej. Foto: Juan Pérez / Fuente"
+                      className="h-8 text-xs"
+                    />
                   </div>
                 </div>
               )}
@@ -365,25 +374,37 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
             </div>
 
             {formData.images.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {formData.images.map((img: any, index: number) => (
-                  <div key={img.publicId || index} className="relative group rounded-lg border overflow-hidden aspect-square bg-muted">
-                    <img
-                      src={img.url}
-                      alt={`Gallery ${index}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => removeGalleryImage(img.publicId)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  <div key={img.publicId || index} className="space-y-2">
+                    <div className="relative group rounded-lg border overflow-hidden aspect-square bg-muted">
+                      <img
+                        src={img.url}
+                        alt={img.caption || `Gallery ${index}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => removeGalleryImage(img.publicId)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
+                    <Input
+                      value={img.caption || ""}
+                      onChange={(e) => {
+                        const newImages = [...formData.images];
+                        newImages[index] = { ...newImages[index], caption: e.target.value };
+                        setFormData({ ...formData, images: newImages });
+                      }}
+                      placeholder="Pie de foto..."
+                      className="h-7 text-xs"
+                    />
                   </div>
                 ))}
               </div>
@@ -569,7 +590,12 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
                 <p className="text-xl text-muted-foreground font-medium italic border-l-4 border-primary pl-4">{formData.excerpt}</p>
 
                 {formData.mainImageUrl && (
-                  <img src={formData.mainImageUrl} className="w-full rounded-xl shadow-lg border" alt="Main" />
+                  <figure>
+                    <img src={formData.mainImageUrl} className="w-full rounded-xl shadow-lg border" alt="Main" />
+                    {formData.mainImageCaption && (
+                      <figcaption className="text-sm text-muted-foreground italic mt-2 text-center">{formData.mainImageCaption}</figcaption>
+                    )}
+                  </figure>
                 )}
 
                 <div className="prose prose-lg dark:prose-invert max-w-none ql-editor !p-0" dangerouslySetInnerHTML={{ __html: formData.content }} />
@@ -584,9 +610,14 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {formData.images.map((img: any, i: number) => (
-                        <div key={i} className="relative aspect-video rounded-lg overflow-hidden border shadow-sm bg-muted">
-                          <img src={img.url} className="w-full h-full object-cover" alt="Gallery" />
-                        </div>
+                        <figure key={i}>
+                          <div className="relative aspect-video rounded-lg overflow-hidden border shadow-sm bg-muted">
+                            <img src={img.url} className="w-full h-full object-cover" alt={img.caption || "Gallery"} />
+                          </div>
+                          {img.caption && (
+                            <figcaption className="text-sm text-muted-foreground italic mt-2 text-center">{img.caption}</figcaption>
+                          )}
+                        </figure>
                       ))}
                     </div>
                   </div>

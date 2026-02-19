@@ -29,7 +29,7 @@ export default function SudokuPage() {
   const loadGame = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/games/sudoku/today`)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/games/sudoku/today`)
       const json = await res.json()
 
       if (json.success && json.data) {

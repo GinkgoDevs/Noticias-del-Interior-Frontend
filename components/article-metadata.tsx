@@ -59,6 +59,9 @@ export function generateArticleMetadata({
     alternates: {
       canonical: fullUrl,
     },
+    other: {
+      "fb:app_id": process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || "",
+    },
   }
 }
 

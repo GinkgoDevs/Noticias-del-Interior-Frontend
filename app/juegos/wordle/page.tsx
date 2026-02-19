@@ -32,11 +32,11 @@ export default function WordlePage() {
   const loadGame = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/games/wordle/today`)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/games/wordle/today`)
       const json = await res.json()
 
       if (json.success && json.data) {
-        const word = json.data.word
+        const word = (json.data.word || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         setTargetWord(word)
         setClue(json.data.clue || "")
 
@@ -68,8 +68,9 @@ export default function WordlePage() {
 
   const evaluateGuess = (guess: string): GuessLetter[] => {
     const result: GuessLetter[] = []
-    const targetLetters = targetWord.split("")
-    const guessLetters = guess.split("")
+    const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    const targetLetters = normalize(targetWord).split("")
+    const guessLetters = normalize(guess).split("")
 
     const usedTargetIndices: boolean[] = Array(5).fill(false)
     const letterResults: LetterStatus[] = Array(5).fill("absent")

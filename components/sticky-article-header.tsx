@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Share2, Bookmark, ArrowLeft } from "lucide-react"
+import { Share2, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -47,9 +47,6 @@ export function StickyArticleHeader({ title, category }: StickyArticleHeaderProp
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
-                        <Bookmark className="h-4 w-4" />
-                    </Button>
                     <Button variant="default" size="sm" className="rounded-full px-4 gap-2">
                         <Share2 className="h-4 w-4" />
                         <span className="hidden sm:inline">Compartir</span>

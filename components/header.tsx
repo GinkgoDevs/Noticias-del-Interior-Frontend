@@ -11,6 +11,7 @@ import { BreakingNewsBanner } from "./breaking-news-banner"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { ModeToggle } from "./mode-toggle"
 import { ReadingProgress } from "./reading-progress"
@@ -18,6 +19,7 @@ import { ScrollToTop } from "./scroll-to-top"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const navLinks = [
+  { href: "/noticias", label: "Todas" },
   { href: "/deportes", label: "Deportes" },
   { href: "/policiales", label: "Policiales" },
   { href: "/politica", label: "Política" },
@@ -53,8 +55,7 @@ export function Header() {
     const timer = setTimeout(async () => {
       setIsSearching(true)
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-        const response = await fetch(`${apiUrl}/news?search=${encodeURIComponent(searchQuery)}&limit=5`)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001/v1'}/news?search=${encodeURIComponent(searchQuery)}&limit=5`)
         const json = await response.json()
         // Handle both wrapped and direct data
         const data = json.data?.data || (json.success ? json.data?.data : [])
@@ -85,20 +86,19 @@ export function Header() {
       <InfoBar />
       <BreakingNewsBanner />
       <header
-        className={`sticky top-0 z-50 w-full transition-all duration-500 border-b border-border/50 
-          ${isScrolled
-            ? "bg-background/85 backdrop-blur-md shadow-lg py-1.5"
-            : "bg-background py-2"
-          }`}
+        className={cn(
+          "sticky top-0 z-50 w-full transition-all duration-300 border-b border-primary/20 shadow-xl bg-background",
+          isScrolled ? "py-0" : "py-0"
+        )}
       >
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <div className={`flex items-center justify-between gap-4 transition-all duration-500 ${isScrolled ? "h-12" : "h-14 md:h-16"}`}>
-            <div className="flex items-center gap-4 md:gap-8">
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center gap-4">
               {isMounted ? (
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="md:hidden">
-                      <Menu className="h-5 w-5" />
+                    <Button variant="ghost" size="icon" className="lg:hidden text-primary">
+                      <Menu className="h-8 w-8" />
                       <span className="sr-only">Abrir menú</span>
                     </Button>
                   </SheetTrigger>
@@ -107,11 +107,18 @@ export function Header() {
                     <div className="flex flex-col gap-6 mt-8">
                       <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3">
                         <Image
+                          src="/logo-oscuro.png"
+                          alt="Noticias del Interior"
+                          width={180}
+                          height={50}
+                          className="h-10 w-auto dark:hidden"
+                        />
+                        <Image
                           src="/logo-claro.png"
                           alt="Noticias del Interior"
-                          width={50}
+                          width={180}
                           height={50}
-                          className="object-contain"
+                          className="h-10 w-auto hidden dark:block"
                         />
                       </Link>
                       <nav className="flex flex-col gap-4">
@@ -126,45 +133,42 @@ export function Header() {
                           </Link>
                         ))}
                       </nav>
-                      <Button className="w-full rounded-full px-6 mt-4 bg-primary text-primary-foreground hover:bg-primary/90">
-                        Suscribirse
-                      </Button>
+
                     </div>
                   </SheetContent>
                 </Sheet>
               ) : (
-                <Button variant="ghost" size="icon" className="md:hidden">
+                <Button variant="ghost" size="icon" className="lg:hidden">
                   <Menu className="h-5 w-5" />
-                  <span className="sr-only">Abrir menú</span>
                 </Button>
               )}
 
-              <Link href="/" className="flex items-center gap-2 md:gap-3 group">
-                <div className={`relative transition-all duration-500 ${isScrolled ? "scale-75" : "scale-90 md:scale-100"}`}>
-                  <Image
-                    src="/logo-claro.png"
-                    alt="Noticias del Interior"
-                    width={150}
-                    height={100}
-                    className="object-contain hidden md:block dark:hidden"
-                  />
-                  <Image
-                    src="/logo-oscuro.png"
-                    alt="Noticias del Interior"
-                    width={150}
-                    height={100}
-                    className="object-contain md:hidden dark:block"
-                  />
-                </div>
+              <Link href="/" className="flex-shrink-0 flex items-center">
+                <Image
+                  src="/logo-claro.png"
+                  alt="Noticias del Interior"
+                  width={280}
+                  height={70}
+                  className="w-[160px] md:w-[220px] h-auto dark:hidden"
+                  priority
+                />
+                <Image
+                  src="/logo-oscuro.png"
+                  alt="Noticias del Interior"
+                  width={280}
+                  height={70}
+                  className="w-[160px] md:w-[220px] h-auto hidden dark:block"
+                  priority
+                />
               </Link>
             </div>
 
-            <nav className="hidden md:flex items-center gap-5 lg:gap-7">
-              {navLinks.map((link) => (
+            <nav className="hidden lg:flex items-center space-x-8 text-sm font-semibold uppercase tracking-wider">
+              {navLinks.slice(0, 6).map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-[13px] font-bold tracking-[0.12em] uppercase text-muted-foreground transition-all hover:text-primary relative group"
+                  className="hover:text-primary transition-colors pb-1 relative group"
                 >
                   {link.label}
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
@@ -178,10 +182,10 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-full h-9 w-9 hover:bg-accent hover:text-primary transition-colors"
+                    className="rounded-full h-9 w-9 hover:bg-accent hover:text-primary transition-colors focus-visible:ring-0"
                     onClick={() => setSearchOpen(true)}
                   >
-                    <Search className="h-4.5 w-4.5" />
+                    <Search className="h-5 w-5 md:h-4.5 md:w-4.5" />
                     <span className="sr-only">Buscar noticias</span>
                   </Button>
                   <DialogContent className="sm:max-w-[550px]">
@@ -231,7 +235,7 @@ export function Header() {
                               key={article.id}
                               href={`/noticia/${article.slug}`}
                               onClick={() => setSearchOpen(false)}
-                              className="group flex gap-4 items-start p-3 rounded-xl hover:bg-primary/5 transition-all duration-300"
+                              className="group flex gap-4 items-start p-3 rounded-xl hover:bg-primary/5 glass-panel transition-all duration-300"
                             >
                               <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-muted border border-border/10">
                                 <Image
@@ -243,14 +247,14 @@ export function Header() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-[9px] font-bold text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded">
+                                  <span className="text-[9px] font-black text-primary uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-none">
                                     {article.category?.name}
                                   </span>
-                                  <span className="text-[9px] text-muted-foreground">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
                                     {new Date(article.publishedAt).toLocaleDateString("es-AR", { month: 'short', day: 'numeric' })}
                                   </span>
                                 </div>
-                                <h4 className="font-bold text-sm line-clamp-2 group-hover:text-primary transition-colors leading-tight">
+                                <h4 className="font-serif font-bold text-sm line-clamp-2 group-hover:text-primary transition-colors leading-tight tracking-tight">
                                   {article.title}
                                 </h4>
                               </div>
@@ -295,29 +299,39 @@ export function Header() {
                 </Button>
               )}
               <ModeToggle />
-              <Button className="hidden md:inline-flex rounded-full px-6 bg-primary text-primary-foreground hover:bg-primary/90">
-                Suscribirse
-              </Button>
+
             </div>
           </div>
 
           {/* Trending Topics - Premium sub-header bar */}
-          {!isScrolled && (
-            <div className="hidden md:flex items-center gap-4 py-3 border-t border-border/40 overflow-x-auto scrollbar-none">
-              <span className="text-[10px] font-black uppercase tracking-widest text-primary whitespace-nowrap">Temas:</span>
-              <div className="flex items-center gap-2">
-                {["#Elecciones", "#DólarBlue", "#Clima", "#FútbolArgentino", "#Turismo", "#Cultura"].map((tag) => (
-                  <Link
-                    key={tag}
-                    href={`/buscar?q=${tag.replace('#', '')}`}
-                    className="text-[11px] font-bold text-muted-foreground hover:text-primary transition-colors px-2 py-0.5 rounded-full border border-border/60 hover:border-primary/40 whitespace-nowrap"
-                  >
-                    {tag}
-                  </Link>
-                ))}
-              </div>
+          <div className={`hidden md:flex items-center gap-4 border-t border-border/40 overflow-hidden scrollbar-none transition-all duration-500 ease-in-out ${isScrolled ? 'max-h-0 py-0 opacity-0' : 'max-h-16 py-3 opacity-100'}`}>
+            <span className="text-[10px] font-black uppercase tracking-widest text-primary whitespace-nowrap">Temas:</span>
+            <div className="flex items-center gap-2">
+              {["#Elecciones", "#DólarBlue", "#Clima", "#FútbolArgentino", "#Turismo", "#Cultura"].map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/buscar?q=${tag.replace('#', '')}`}
+                  className="text-[11px] font-bold text-muted-foreground hover:text-primary transition-colors px-2 py-0.5 rounded-full border border-border/60 hover:border-primary/40 whitespace-nowrap"
+                >
+                  {tag}
+                </Link>
+              ))}
             </div>
-          )}
+          </div>
+        </div>
+        {/* Mobile Category Bar */}
+        <div className="lg:hidden bg-background/95 backdrop-blur-md border-t border-primary/10 overflow-x-auto scrollbar-none sticky top-20 shadow-sm">
+          <div className="flex items-center px-4 py-3 min-w-max space-x-6">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </header>
     </div>

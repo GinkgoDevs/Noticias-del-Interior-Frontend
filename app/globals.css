@@ -8,7 +8,8 @@
 
   /* Tipografía premium */
   --font-serif: "Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Work Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback";
 
   /* Radius values */
@@ -50,17 +51,19 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-surface-dark: var(--surface-dark);
+  --color-card-dark: var(--card-dark);
 }
 
 /* Using standard :root and .dark for runtime CSS variables */
 :root {
-  --background: oklch(0.995 0 0);
+  --background: oklch(0.975 0.005 15);
   --foreground: oklch(0.15 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.15 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.15 0 0);
-  --primary: oklch(0.35 0.12 15);
+  --primary: oklch(0.55 0.22 25);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.25 0.08 15);
   --secondary-foreground: oklch(0.99 0 0);
@@ -72,16 +75,18 @@
   --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.9 0 0);
   --input: oklch(0.9 0 0);
-  --ring: oklch(0.35 0.12 15);
+  --ring: oklch(0.55 0.22 25);
   --chart-1: oklch(0.4 0.12 15);
   --chart-2: oklch(0.5 0.12 180);
   --chart-3: oklch(0.45 0.1 220);
   --chart-4: oklch(0.55 0.13 160);
   --chart-5: oklch(0.6 0.14 140);
-  --radius: 0.5rem;
+  --radius: 0.25rem;
+  --surface-dark: oklch(0.96 0.005 15);
+  --card-dark: oklch(0.97 0.005 15);
   --sidebar: oklch(0.995 0 0);
   --sidebar-foreground: oklch(0.15 0 0);
-  --sidebar-primary: oklch(0.35 0.12 15);
+  --sidebar-primary: oklch(0.55 0.22 25);
   --sidebar-primary-foreground: oklch(0.99 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.15 0 0);
@@ -90,41 +95,41 @@
 }
 
 .dark {
-  --background: oklch(0.12 0.02 240);
-  /* Deep navy-charcoal */
-  --foreground: oklch(0.92 0.01 240);
-  --card: oklch(0.16 0.02 240);
-  --card-foreground: oklch(0.92 0.01 240);
-  --popover: oklch(0.14 0.02 240);
-  --popover-foreground: oklch(0.92 0.01 240);
-  --primary: oklch(0.55 0.18 25);
-  /* Vibrant but balanced dark-mode primary */
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.25 0.04 240);
-  --secondary-foreground: oklch(0.92 0.01 240);
-  --muted: oklch(0.2 0.02 240);
-  --muted-foreground: oklch(0.65 0.02 240);
-  --accent: oklch(0.25 0.06 15);
-  /* Subtle dark primary accent */
-  --accent-foreground: oklch(0.95 0 0);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.22 0.02 240);
-  --input: oklch(0.22 0.02 240);
-  --ring: oklch(0.55 0.18 25);
-  --chart-1: oklch(0.6 0.15 260);
+  /* Deep burgundy-black palette inspired by NDI brand */
+  --background: #120808;
+  --foreground: #e5e7eb;
+  --card: #2d1616;
+  --card-foreground: #e5e7eb;
+  --popover: #221010;
+  --popover-foreground: #e5e7eb;
+  --primary: #ee2b2b;
+  --primary-foreground: #ffffff;
+  --secondary: #221010;
+  --secondary-foreground: #e5e7eb;
+  --muted: #221010;
+  --muted-foreground: #9ca3af;
+  --accent: #2d1616;
+  --accent-foreground: #f3f4f6;
+  --destructive: #ee2b2b;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #ee2b2b;
+  --chart-1: #ee2b2b;
   --chart-2: oklch(0.65 0.12 180);
   --chart-3: oklch(0.58 0.1 220);
   --chart-4: oklch(0.68 0.13 160);
   --chart-5: oklch(0.72 0.14 140);
-  --sidebar: oklch(0.14 0.02 240);
-  --sidebar-foreground: oklch(0.92 0.01 240);
-  --sidebar-primary: oklch(0.55 0.18 25);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.2 0.02 240);
-  --sidebar-accent-foreground: oklch(0.92 0.01 240);
-  --sidebar-border: oklch(0.22 0.02 240);
-  --sidebar-ring: oklch(0.55 0.18 25);
+  --surface-dark: #221010;
+  --card-dark: #2d1616;
+  --sidebar: #221010;
+  --sidebar-foreground: #e5e7eb;
+  --sidebar-primary: #ee2b2b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2d1616;
+  --sidebar-accent-foreground: #e5e7eb;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #ee2b2b;
 }
 
 @layer base {
@@ -136,6 +141,26 @@
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Grain Texture Overlay for Premium Organic Feel */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.03;
+    z-index: 9999;
+    pointer-events: none;
+    background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+    filter: contrast(120%) brightness(100%);
+  }
+
+  .glass-panel {
+    @apply bg-background/60 backdrop-blur-xl border border-white/10 dark:border-white/5;
   }
 
   p {
@@ -201,17 +226,43 @@
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px) scale(0.98);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .animate-fade-up {
-  animation: fade-up 0.6s ease-out;
+  animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Staggered Entrance System */
+.reveal-staggered>* {
+  opacity: 0;
+  animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.reveal-staggered>*:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.reveal-staggered>*:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.reveal-staggered>*:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.reveal-staggered>*:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.reveal-staggered>*:nth-child(5) {
+  animation-delay: 0.5s;
 }
 
 /* Updated text gradient to use brand burgundy */
@@ -243,4 +294,43 @@
   background-color: oklch(1 0 0);
   /* El editor se mantiene blanco por legibilidad */
   color: black;
+}
+
+/* Fix para contenido de WordPress que rompe el layout */
+.prose {
+  max-width: 100% !important;
+  hyphens: auto !important;
+  -webkit-hyphens: auto !important;
+  -moz-hyphens: auto !important;
+  -ms-hyphens: auto !important;
+  word-break: normal !important;
+  text-align: justify;
+  text-justify: inter-word;
+  /* Control fino de guionización: palabra min 5 letras, 2 antes, 2 después */
+  hyphenate-limit-chars: 5 2 2;
+}
+
+.prose p {
+  hyphens: auto !important;
+  -webkit-hyphens: auto !important;
+  word-break: normal !important;
+  line-height: 1.8;
+}
+
+.prose * {
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
+}
+
+.prose img,
+.prose video,
+.prose iframe,
+.prose table {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.prose table {
+  display: block;
+  overflow-x: auto;
 }

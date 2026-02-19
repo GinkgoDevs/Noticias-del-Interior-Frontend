@@ -25,7 +25,7 @@ export function AdBanner({ position, className }: AdBannerProps) {
     useEffect(() => {
         const fetchAd = async () => {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/ads/active?position=${position}`)
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/ads/active?position=${position}`)
                 const data = await res.json()
                 if (data && data.length > 0) {
                     // Select one randomly if there are multiple for this position
@@ -33,7 +33,7 @@ export function AdBanner({ position, className }: AdBannerProps) {
                     setAd(selected)
 
                     // Record view
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/ads/${selected.id}/view`, { method: 'POST' })
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/ads/${selected.id}/view`, { method: 'POST' })
                 }
             } catch (error) {
                 console.error('Error loading ad:', error)
@@ -47,7 +47,7 @@ export function AdBanner({ position, className }: AdBannerProps) {
 
     const handleClick = () => {
         if (ad) {
-            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/ads/${ad.id}/click`, { method: 'POST' })
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/ads/${ad.id}/click`, { method: 'POST' })
         }
     }
 

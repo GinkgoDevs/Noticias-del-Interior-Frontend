@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
 
 interface SocialShareProps {
@@ -21,7 +21,12 @@ interface SocialShareProps {
 
 export function SocialShare({ url, title, description, variant = "button" }: SocialShareProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const shareUrl = typeof window !== "undefined" ? window.location.origin + url : url
   const encodedUrl = encodeURIComponent(shareUrl)
@@ -107,6 +112,15 @@ export function SocialShare({ url, title, description, variant = "button" }: Soc
           <span className="sr-only">Compartir por email</span>
         </Button>
       </div>
+    )
+  }
+
+  if (!mounted) {
+    return (
+      <Button variant="outline" size="sm" className="gap-2 bg-transparent opacity-50">
+        <Link2 className="h-4 w-4" />
+        Compartir
+      </Button>
     )
   }
 

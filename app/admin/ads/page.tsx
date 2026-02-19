@@ -95,7 +95,7 @@ export default function AdsAdminPage() {
     const fetchAds = async () => {
         try {
             const token = localStorage.getItem('token')
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/ads/admin/all`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/ads/admin/all`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             const data = await res.json()
@@ -117,7 +117,7 @@ export default function AdsAdminPage() {
 
         try {
             const token = localStorage.getItem('token')
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/upload`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/upload`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
@@ -143,7 +143,7 @@ export default function AdsAdminPage() {
         setIsSubmitting(true)
         try {
             const token = localStorage.getItem('token')
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/ads`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/ads`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -168,7 +168,7 @@ export default function AdsAdminPage() {
     const toggleActive = async (id: string, currentStatus: boolean) => {
         try {
             const token = localStorage.getItem('token')
-            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/ads/${id}`, {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/ads/${id}`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -186,7 +186,7 @@ export default function AdsAdminPage() {
         if (!confirm('¿Estás seguro de eliminar esta publicidad?')) return
         try {
             const token = localStorage.getItem('token')
-            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/ads/${id}`, {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/ads/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             })
