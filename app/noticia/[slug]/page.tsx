@@ -9,19 +9,40 @@ import { ListArticle } from "@/components/list-article"
 import { SocialShare } from "@/components/social-share"
 import { FacebookComments } from "@/components/facebook-comments"
 import { generateArticleMetadata, generateArticleJSONLD } from "@/components/article-metadata"
-import { Bookmark, Clock, User } from "lucide-react"
+import { Clock, User, ChevronRight, Home, Image as ImageIcon } from "lucide-react"
 import { fetchApi } from "@/lib/api-client"
 import { notFound } from "next/navigation"
+import { StickyArticleHeader } from "@/components/sticky-article-header"
+import { AdBanner } from "@/components/ad-banner"
+
+
+export async function generateStaticParams() {
+  try {
+    const response = await fetchApi("/news?limit=20");
+    if (response.success && response.data?.data) {
+      return response.data.data.map((post: any) => ({
+        slug: post.slug,
+      }));
+    }
+  } catch (error) {
+    console.error("Error generating static params:", error);
+  }
+  return [];
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   try {
-    const response = await fetchApi(`/news/${slug}`);
+    const response = await fetchApi(`/news/${slug}`, {
+      next: { tags: [`news-${slug}`], revalidate: 3600 }
+    });
     const article = response.data;
 
+    if (!article) return { title: "Noticia no encontrada" };
+
     return generateArticleMetadata({
-      title: article.title,
-      description: article.excerpt,
+      title: article.seoTitle || article.title,
+      description: article.seoDescription || article.excerpt,
       image: article.mainImageUrl || "/placeholder.svg",
       url: `/noticia/${slug}`,
       publishedTime: article.publishedAt,
@@ -41,7 +62,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   let trending: any[] = [];
 
   try {
-    const response = await fetchApi(`/news/${slug}`);
+    const response = await fetchApi(`/news/${slug}`, {
+      next: { tags: [`news-${slug}`], revalidate: 3600 }
+    });
     article = response.data;
 
     if (!article) notFound();
@@ -58,7 +81,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     // Get trending news
     const trendingRes = await fetchApi("/news/trending");
     if (trendingRes.success && trendingRes.data) {
-      trending = trendingRes.data;
+      // Filter out the current article by ID or slug and limit to 5
+      trending = trendingRes.data
+        .filter((a: any) => a.id !== article.id && a.slug !== slug)
+        .slice(0, 5);
     }
 
   } catch (error) {
@@ -82,8 +108,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   };
 
   const jsonLd = generateArticleJSONLD({
-    title: article.title,
-    description: article.excerpt,
+    title: article.seoTitle || article.title,
+    description: article.seoDescription || article.excerpt,
     image: article.mainImageUrl || "/placeholder.svg",
     url: `/noticia/${slug}`,
     publishedTime: article.publishedAt,
@@ -95,29 +121,31 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     <div className="min-h-screen bg-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
+      <StickyArticleHeader title={article.title} category={article.category?.name || "Actualidad"} />
       <Header />
 
-      <main className="container mx-auto px-6 lg:px-8 py-12">
-        {/* Breadcrumbs */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-          <Link href="/" className="hover:text-foreground transition-colors">
+      <main className="container mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">
+        {/* Breadcrumbs Premium */}
+        <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground mb-8 md:mb-12 bg-muted/30 w-fit px-4 py-2 rounded-full border border-border/50">
+          <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1.5">
+            <Home className="h-3 w-3" />
             Inicio
           </Link>
-          <span>/</span>
+          <ChevronRight className="h-3 w-3 text-border" />
           {article.category && (
             <>
-              <Link href={`/${article.category.slug}`} className="hover:text-foreground transition-colors">
+              <Link href={`/${article.category.slug}`} className="hover:text-primary transition-colors">
                 {article.category.name}
               </Link>
-              <span>/</span>
+              <ChevronRight className="h-3 w-3 text-border" />
             </>
           )}
-          <span className="text-foreground">Artículo</span>
+          <span className="text-primary truncate max-w-[150px] md:max-w-xs">Noticia</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 relative">
           {/* Contenido principal */}
-          <article className="lg:col-span-8">
+          <article className="lg:col-span-8 w-full min-w-0 overflow-hidden" lang="es">
             {/* Header del artículo */}
             <div className="mb-8">
               {article.category && (
@@ -125,7 +153,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                   {article.category.name}
                 </Badge>
               )}
-              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-balance leading-tight">
+              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-pretty leading-tight">
                 {article.title}
               </h1>
               {article.excerpt && (
@@ -156,32 +184,66 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                     title={article.title}
                     description={article.excerpt}
                   />
-                  <Button variant="outline" size="icon">
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             </div>
 
             {/* Imagen principal */}
             {(article.mainImageUrl) && (
-              <div className="mb-10">
+              <figure className="mb-10">
                 <div className="relative aspect-[16/9] overflow-hidden rounded-lg border border-border">
                   <Image
                     src={article.mainImageUrl}
-                    alt={article.title}
+                    alt={article.mainImageCaption || article.title}
                     fill
                     className="object-cover"
                   />
                 </div>
-              </div>
+                {article.mainImageCaption && (
+                  <figcaption className="text-sm text-muted-foreground italic mt-3 text-center px-4">
+                    {article.mainImageCaption}
+                  </figcaption>
+                )}
+              </figure>
             )}
 
-            {/* Contenido del artículo */}
+            {/* Contenido del artículo Premium Typography */}
             <div
-              className="prose prose-lg max-w-none prose-slate"
-              dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br/>') }}
+              className="prose prose-lg md:prose-xl max-w-none dark:prose-invert prose-slate prose-headings:font-serif prose-headings:font-bold prose-p:leading-relaxed prose-p:text-pretty prose-img:rounded-lg"
+              dangerouslySetInnerHTML={{ __html: article.content }}
             />
+
+            {/* Galería de Imágenes Premium */}
+            {article.images && article.images.length > 0 && (
+              <div className="mt-16 pt-12 border-t border-border/50">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="h-8 w-1 bg-primary rounded-full" />
+                  <h3 className="font-serif text-3xl font-bold flex items-center gap-2">
+                    <ImageIcon className="h-6 w-6 text-primary" /> Galería de Imágenes
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {article.images.map((img: any, i: number) => (
+                    <figure key={i}>
+                      <div className="group relative overflow-hidden rounded-xl border border-border bg-muted aspect-video shadow-sm hover:shadow-xl transition-all duration-500">
+                        <Image
+                          src={img.url}
+                          alt={img.caption || `Galería ${i + 1}`}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      </div>
+                      {img.caption && (
+                        <figcaption className="text-sm text-muted-foreground italic mt-3 text-center px-2">
+                          {img.caption}
+                        </figcaption>
+                      )}
+                    </figure>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Compartir en redes */}
             <Separator className="my-12" />
@@ -235,47 +297,32 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           </article>
 
           {/* Sidebar */}
-          <aside className="lg:col-span-4">
-            <div className="sticky top-24 space-y-10">
-              {/* Lo más leído */}
-              <div>
-                <h3 className="font-serif text-2xl font-bold mb-6 pb-3 border-b border-border">Lo más leído</h3>
-                <div>
-                  {trending.map((item: any, index: number) => (
-                    <ListArticle
-                      key={item.id || index}
-                      category={item.category?.name || "Actualidad"}
-                      title={item.title}
-                      date={new Date(item.publishedAt).toLocaleDateString("es-ES")}
-                      number={index + 1}
-                      slug={item.slug}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Banner publicitario */}
-              <div className="bg-muted/50 border border-border p-8 text-center rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">PUBLICIDAD</p>
-                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-                  <span className="text-muted-foreground">300x300</span>
-                </div>
-              </div>
-
-              {/* Newsletter */}
-              <div className="bg-accent/50 p-8 border border-border rounded-lg">
-                <h3 className="font-serif text-2xl font-bold mb-4">Newsletter</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                  Recibe las noticias más importantes del interior argentino directamente en tu correo electrónico.
-                </p>
-                <div className="space-y-3">
-                  <input
-                    type="email"
-                    placeholder="tu@email.com"
-                    className="w-full px-4 py-2 rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          <aside className="lg:col-span-4 w-full min-w-0 space-y-10 h-full">
+            {/* Lo más leído */}
+            <div>
+              <h3 className="font-serif text-2xl font-bold mb-6 pb-3 border-b border-border">Lo más leído</h3>
+              <div className="space-y-6">
+                {trending.map((item: any, index: number) => (
+                  <ListArticle
+                    key={item.id || index}
+                    category={item.category?.name || "Actualidad"}
+                    title={item.title}
+                    date={new Date(item.publishedAt).toLocaleDateString("es-ES")}
+                    number={index + 1}
+                    slug={item.slug}
                   />
-                  <Button className="w-full rounded-full">Suscribirme</Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Banner publicitario Dinámico - sticky */}
+            <div className="sticky top-28">
+              <div className="bg-surface-dark rounded-xl p-4 border border-primary/10 shadow-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Publicidad</span>
+                  <Link href="/anunciar" className="text-[10px] text-primary/60 hover:text-primary transition-colors font-bold">ANUNCIÁ AQUÍ</Link>
                 </div>
+                <AdBanner position="SIDEBAR" className="h-[300px] rounded-lg overflow-hidden border border-foreground/5" />
               </div>
             </div>
           </aside>

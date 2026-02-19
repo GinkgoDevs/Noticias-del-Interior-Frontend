@@ -20,8 +20,8 @@ export default async function UsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Usuarios</h1>
-          <p className="text-slate-600 mt-1">Gestiona los usuarios y sus roles</p>
+          <h1 className="text-3xl font-bold tracking-tight">Usuarios</h1>
+          <p className="text-muted-foreground mt-1">Gestiona los usuarios y sus roles</p>
         </div>
         <InviteUserDialog />
       </div>

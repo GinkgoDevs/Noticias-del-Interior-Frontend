@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { generateSudoku, checkSudokuSolution, type SudokuGrid } from "@/lib/sudoku-generator"
 import { Button } from "@/components/ui/button"
@@ -9,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Award, Calendar, RotateCcw, Lightbulb } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type Difficulty = "easy" | "medium" | "hard"
 
@@ -21,30 +20,43 @@ export default function SudokuPage() {
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null)
   const [gameWon, setGameWon] = useState(false)
   const [errors, setErrors] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadGame()
   }, [])
 
-  const loadGame = () => {
-    const today = new Date().toDateString()
-    const savedGame = localStorage.getItem(`sudoku-game-${today}`)
+  const loadGame = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/games/sudoku/today`)
+      const json = await res.json()
 
-    if (savedGame) {
-      const {
-        puzzle: savedPuzzle,
-        solution: savedSolution,
-        userGrid: savedUserGrid,
-        difficulty: savedDifficulty,
-        won,
-      } = JSON.parse(savedGame)
-      setPuzzle(savedPuzzle)
-      setSolution(savedSolution)
-      setUserGrid(savedUserGrid)
-      setDifficulty(savedDifficulty)
-      setGameWon(won || false)
-    } else {
-      startNewGame("medium")
+      if (json.success && json.data) {
+        const { puzzle: dailyPuzzle, solution: dailySolution } = json.data
+
+        const today = new Date().toDateString()
+        const savedGame = localStorage.getItem(`sudoku-game-${today}`)
+
+        if (savedGame) {
+          const { userGrid: savedUserGrid, won } = JSON.parse(savedGame)
+          setPuzzle(dailyPuzzle)
+          setSolution(dailySolution)
+          setUserGrid(savedUserGrid)
+          setDifficulty(json.data.difficulty || "medium")
+          setGameWon(won || false)
+        } else {
+          setPuzzle(dailyPuzzle)
+          setSolution(dailySolution)
+          setUserGrid(dailyPuzzle.map((row: number[]) => [...row]))
+          setDifficulty(json.data.difficulty || "medium")
+          setGameWon(false)
+        }
+      }
+    } catch (error) {
+      console.error("Error loading daily sudoku:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -58,7 +70,6 @@ export default function SudokuPage() {
     setErrors(new Set())
     setSelectedCell(null)
 
-    // Guardar juego nuevo
     const today = new Date().toDateString()
     localStorage.setItem(
       `sudoku-game-${today}`,
@@ -86,10 +97,8 @@ export default function SudokuPage() {
 
     const newGrid = userGrid.map((r) => [...r])
     newGrid[row][col] = num
-
     setUserGrid(newGrid)
 
-    // Verificar si el número es correcto
     if (num !== 0 && num !== solution[row][col]) {
       const errorKey = `${row}-${col}`
       setErrors((prev) => new Set(prev).add(errorKey))
@@ -102,40 +111,19 @@ export default function SudokuPage() {
       })
     }
 
-    // Verificar si ganó
     const isComplete = newGrid.every((row) => row.every((cell) => cell !== 0))
     if (isComplete && checkSudokuSolution(newGrid, solution)) {
       setGameWon(true)
       const today = new Date().toDateString()
-      localStorage.setItem(
-        `sudoku-game-${today}`,
-        JSON.stringify({
-          puzzle,
-          solution,
-          userGrid: newGrid,
-          difficulty,
-          won: true,
-        }),
-      )
+      localStorage.setItem(`sudoku-game-${today}`, JSON.stringify({ puzzle, solution, userGrid: newGrid, difficulty, won: true }))
     } else {
-      // Guardar progreso
       const today = new Date().toDateString()
-      localStorage.setItem(
-        `sudoku-game-${today}`,
-        JSON.stringify({
-          puzzle,
-          solution,
-          userGrid: newGrid,
-          difficulty,
-          won: false,
-        }),
-      )
+      localStorage.setItem(`sudoku-game-${today}`, JSON.stringify({ puzzle, solution, userGrid: newGrid, difficulty, won: false }))
     }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (!selectedCell) return
-
     const num = Number.parseInt(e.key)
     if (num >= 1 && num <= 9) {
       handleNumberInput(num)
@@ -146,10 +134,10 @@ export default function SudokuPage() {
 
   const getCellColor = (row: number, col: number) => {
     const errorKey = `${row}-${col}`
-    if (errors.has(errorKey)) return "bg-red-100 dark:bg-red-900/30 border-red-500"
-    if (selectedCell?.row === row && selectedCell?.col === col) return "bg-blue-100 dark:bg-blue-900/30 border-blue-500"
-    if (selectedCell?.row === row || selectedCell?.col === col) return "bg-blue-50 dark:bg-blue-900/10"
-    if (Math.floor(row / 3) % 2 === Math.floor(col / 3) % 2) return "bg-muted/30"
+    if (errors.has(errorKey)) return "bg-red-100 dark:bg-red-950/50 border-red-500"
+    if (selectedCell?.row === row && selectedCell?.col === col) return "bg-primary/20 dark:bg-primary/30 border-primary"
+    if (selectedCell?.row === row || selectedCell?.col === col) return "bg-primary/5 dark:bg-primary/10"
+    if (Math.floor(row / 3) % 2 === Math.floor(col / 3) % 2) return "bg-muted/50 dark:bg-muted/20"
     return "bg-background"
   }
 
@@ -174,87 +162,102 @@ export default function SudokuPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 flex justify-center">
-              <Tabs value={difficulty} onValueChange={(v) => setDifficulty(v as Difficulty)}>
-                <TabsList>
-                  <TabsTrigger value="easy">Fácil</TabsTrigger>
-                  <TabsTrigger value="medium">Medio</TabsTrigger>
-                  <TabsTrigger value="hard">Difícil</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            {gameWon && (
-              <Alert className="bg-green-500/10 border-green-500/50 mb-6">
-                <Award className="h-4 w-4 text-green-500" />
-                <AlertDescription className="text-green-700 dark:text-green-300">
-                  ¡Felicitaciones! Completaste el Sudoku correctamente
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="flex justify-center mb-6" onKeyDown={handleKeyPress} tabIndex={0}>
-              <div className="inline-block border-4 border-border rounded-lg overflow-hidden">
-                {userGrid.map((row, rowIndex) => (
-                  <div key={rowIndex} className="flex">
-                    {row.map((cell, colIndex) => (
-                      <button
-                        key={colIndex}
-                        onClick={() => handleCellClick(rowIndex, colIndex)}
-                        className={`w-12 h-12 border border-border flex items-center justify-center text-lg font-semibold transition-colors ${getCellColor(
-                          rowIndex,
-                          colIndex,
-                        )} ${puzzle[rowIndex][colIndex] !== 0 ? "text-foreground font-bold" : "text-primary cursor-pointer hover:bg-accent"} ${
-                          colIndex % 3 === 2 && colIndex !== 8 ? "border-r-2 border-r-border" : ""
-                        } ${rowIndex % 3 === 2 && rowIndex !== 8 ? "border-b-2 border-b-border" : ""}`}
-                        disabled={puzzle[rowIndex][colIndex] !== 0 || gameWon}
-                      >
-                        {cell !== 0 ? cell : ""}
-                      </button>
+            {loading ? (
+              <div className="space-y-6">
+                <div className="mb-6 flex justify-center">
+                  <Skeleton className="h-6 w-32 rounded-full" />
+                </div>
+                <div className="flex justify-center mb-6">
+                  <div className="grid grid-cols-9 gap-0 border-2 border-border/80">
+                    {Array.from({ length: 9 }).map((_, r) => (
+                      Array.from({ length: 9 }).map((_, c) => (
+                        <Skeleton
+                          key={`${r}-${c}`}
+                          className={`w-10 h-10 sm:w-12 sm:h-12 border border-border/40 rounded-none ${c % 3 === 2 && c !== 8 ? "border-r-2" : ""
+                            } ${r % 3 === 2 && r !== 8 ? "border-b-2" : ""}`}
+                        />
+                      ))
                     ))}
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {!gameWon && (
-              <>
+                </div>
                 <div className="grid grid-cols-9 gap-2 mb-4 max-w-md mx-auto">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                    <Button
-                      key={num}
-                      onClick={() => handleNumberInput(num)}
-                      variant="outline"
-                      size="lg"
-                      className="text-lg font-bold"
-                      disabled={!selectedCell}
-                    >
-                      {num}
-                    </Button>
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
                   ))}
                 </div>
-
                 <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleNumberInput(0)}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={!selectedCell}
-                  >
-                    Borrar
-                  </Button>
-                  <Button onClick={() => startNewGame(difficulty)} variant="outline" className="flex-1">
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Reiniciar
-                  </Button>
+                  <Skeleton className="h-10 flex-1" />
+                  <Skeleton className="h-10 flex-1" />
                 </div>
-              </>
-            )}
+              </div>
+            ) : (
+              <>
+                <div className="mb-6 flex justify-center">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted text-sm font-medium">
+                    Dificultad: <span className="capitalize text-primary">{difficulty}</span>
+                  </div>
+                </div>
 
-            {gameWon && (
-              <Button onClick={() => startNewGame(difficulty)} className="w-full" size="lg">
-                Jugar con otra dificultad
-              </Button>
+                {gameWon && (
+                  <Alert className="bg-green-500/10 border-green-500/50 mb-6">
+                    <Award className="h-4 w-4 text-green-500" />
+                    <AlertDescription className="text-green-700 dark:text-green-300">
+                      ¡Felicitaciones! Completaste el Sudoku correctamente
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex justify-center mb-6" onKeyDown={handleKeyPress} tabIndex={0}>
+                  <div className="inline-block border-2 border-border/80 dark:border-border rounded-lg overflow-hidden shadow-lg">
+                    {userGrid.map((row, rowIndex) => (
+                      <div key={rowIndex} className="flex">
+                        {row.map((cell, colIndex) => (
+                          <button
+                            key={colIndex}
+                            onClick={() => handleCellClick(rowIndex, colIndex)}
+                            className={`w-10 h-10 sm:w-12 sm:h-12 border border-border/40 flex items-center justify-center text-lg font-semibold transition-colors ${getCellColor(
+                              rowIndex,
+                              colIndex,
+                            )} ${puzzle[rowIndex][colIndex] !== 0 ? "text-foreground font-bold" : "text-primary cursor-pointer hover:bg-accent"} ${colIndex % 3 === 2 && colIndex !== 8 ? "border-r-2 border-r-border/80 dark:border-r-border" : ""
+                              } ${rowIndex % 3 === 2 && rowIndex !== 8 ? "border-b-2 border-b-border/80 dark:border-b-border" : ""}`}
+                            disabled={puzzle[rowIndex][colIndex] !== 0 || gameWon}
+                          >
+                            {cell !== 0 ? cell : ""}
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {!gameWon && (
+                  <>
+                    <div className="grid grid-cols-9 gap-2 mb-4 max-w-md mx-auto">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                        <Button key={num} onClick={() => handleNumberInput(num)} variant="outline" size="lg" className="text-lg font-bold" disabled={!selectedCell}>
+                          {num}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleNumberInput(0)} variant="outline" className="flex-1" disabled={!selectedCell}>
+                        Borrar
+                      </Button>
+                      <Button onClick={() => startNewGame(difficulty)} variant="outline" className="flex-1">
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Reiniciar
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                {gameWon && (
+                  <Button onClick={() => window.location.reload()} className="w-full" size="lg">
+                    ¡Volver mañana para más!
+                  </Button>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -262,8 +265,7 @@ export default function SudokuPage() {
         <Alert>
           <Lightbulb className="h-4 w-4" />
           <AlertDescription>
-            <strong>Consejo:</strong> Usa el teclado para ingresar números (1-9) y la tecla Suprimir para borrar. Haz
-            clic en una celda vacía para seleccionarla.
+            <strong>Consejo:</strong> Usa el teclado para ingresar números (1-9) y la tecla Suprimir para borrar. Haz clic en una celda vacía para seleccionarla.
           </AlertDescription>
         </Alert>
       </div>

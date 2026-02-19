@@ -2,7 +2,8 @@ export const dynamic = "force-dynamic"
 
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Brain, Grid3x3, Trophy, Calendar } from "lucide-react"
+import { Brain, Grid3x3, Trophy, Calendar, Gamepad2, Home, ArrowLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const games = [
   {
@@ -11,7 +12,15 @@ const games = [
     icon: Brain,
     href: "/juegos/wordle",
     difficulty: "Fácil",
-    color: "from-green-500/20 to-emerald-500/20",
+    color: "from-green-500/20 to-emerald-500/20 dark:from-green-500/10 dark:to-emerald-500/10",
+  },
+  {
+    title: "Crucigrama",
+    description: "Resuelve el desafío diario con pistas de actualidad",
+    icon: Gamepad2,
+    href: "/juegos/crucigrama",
+    difficulty: "Medio",
+    color: "from-amber-500/20 to-orange-500/20 dark:from-amber-500/10 dark:to-orange-500/10",
   },
   {
     title: "Sudoku",
@@ -19,7 +28,7 @@ const games = [
     icon: Grid3x3,
     href: "/juegos/sudoku",
     difficulty: "Medio",
-    color: "from-blue-500/20 to-cyan-500/20",
+    color: "from-blue-500/20 to-cyan-500/20 dark:from-blue-500/10 dark:to-cyan-500/10",
   },
 ]
 
@@ -33,8 +42,16 @@ export default function JuegosPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <div className="container mx-auto px-4 py-12 md:py-16">
+      <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="h-4 w-4" />
+                Volver al Portal de Noticias
+              </Button>
+            </Link>
+          </div>
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-4">
               <Calendar className="h-4 w-4" />
@@ -89,6 +106,15 @@ export default function JuegosPage() {
               </p>
             </CardContent>
           </Card>
+
+          <div className="mt-12 text-center">
+            <Link href="/">
+              <Button variant="outline" className="gap-2">
+                <Home className="h-4 w-4" />
+                Ir a la Portada Principal
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

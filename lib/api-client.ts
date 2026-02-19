@@ -1,7 +1,14 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001/v1';
 
-export async function fetchApi(endpoint: string, options: RequestInit = {}) {
+interface FetchOptions extends RequestInit {
+    revalidate?: number | false;
+    tags?: string[];
+}
+
+export async function fetchApi(endpoint: string, options: FetchOptions = {}) {
     let token: string | undefined;
+
+    const { revalidate, tags, ...restOptions } = options;
 
     if (typeof window !== 'undefined') {
         // Client side: get from cookie or localStorage
@@ -23,8 +30,6 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
             token = cookieStore.get('token')?.value;
             if (token === 'undefined') token = undefined;
         } catch (error) {
-            // If we are somehow here on the client (shouldn't happen with typeof window check)
-            // or if cookies() is called outside of a request context
             console.error('Error accessing cookies on server:', error);
         }
     }
@@ -37,10 +42,16 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
         ...options.headers,
     };
 
+    // Next.js specific fetching options
+    const nextOptions: any = {};
+    if (revalidate !== undefined) nextOptions.revalidate = revalidate;
+    if (tags !== undefined) nextOptions.tags = tags;
+
     try {
         const response = await fetch(url, {
-            ...options,
+            ...restOptions,
             headers,
+            ...(Object.keys(nextOptions).length > 0 ? { next: nextOptions } : {}),
         });
 
         if (!response.ok) {

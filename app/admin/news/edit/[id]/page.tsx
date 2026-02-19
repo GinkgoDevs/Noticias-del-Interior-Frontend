@@ -22,18 +22,25 @@ export default async function EditNewsPage({ params }: { params: Promise<{ id: s
       redirect("/admin/news")
     }
 
-    // Get all categories from NestJS
-    const catRes = await fetchApi("/categories");
+    // Get all categories and tags from NestJS
+    const [catRes, tagsRes] = await Promise.all([
+      fetchApi("/categories"),
+      fetchApi("/admin/tags")
+    ]);
     const categories = catRes.data || [];
 
     return (
       <div className="space-y-6 max-w-4xl">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Editar Noticia</h1>
-          <p className="text-slate-600 mt-1">Actualiza la información de tu noticia</p>
+          <h1 className="text-3xl font-bold tracking-tight">Editar Noticia</h1>
+          <p className="text-muted-foreground mt-1">Actualiza la información de tu noticia</p>
         </div>
 
-        <NewsForm categories={categories} initialData={news} />
+        <NewsForm
+          categories={categories}
+          initialData={news}
+          tags={tagsRes.success ? tagsRes.data : []}
+        />
       </div>
     )
   } catch (error) {

@@ -29,17 +29,17 @@ export function FeaturedCard({ category, title, excerpt, image, date, author, si
   return (
     <Link
       href={`/noticia/${finalSlug}`}
-      className="group relative block overflow-hidden rounded-sm shadow-lg hover:shadow-2xl transition-all duration-500"
+      className="group relative block overflow-hidden rounded-sm shadow-lg hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all duration-700 hover:-translate-y-1"
     >
       <div className={`relative ${heightClass} overflow-hidden bg-black`}>
         <Image
           src={image || "/placeholder.svg"}
           alt={title}
           fill
-          className="object-cover transition-all duration-700 group-hover:scale-110 group-hover:opacity-90"
+          className="object-cover transition-all duration-1000 ease-out group-hover:scale-110 group-hover:opacity-80"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 group-hover:opacity-100 transition-opacity duration-700" />
+        <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors duration-700" />
       </div>
       <div className="absolute inset-0 flex flex-col justify-end p-5 md:p-6 lg:p-8">
         <Badge className="mb-3 md:mb-4 w-fit bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[10px] px-3 md:px-4 py-1.5 hover:bg-primary/95">

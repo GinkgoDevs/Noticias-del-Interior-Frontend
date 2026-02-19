@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, FileText, FolderOpen, Users, Newspaper } from "lucide-react"
+import Image from "next/image"
+import { LayoutDashboard, FileText, FolderOpen, Users, Newspaper, Megaphone, Star, Tag } from "lucide-react"
 
 interface AdminSidebarProps {
   userProfile: {
@@ -33,9 +34,21 @@ const navItems = [
     roles: ["admin"],
   },
   {
+    title: "Etiquetas",
+    href: "/admin/tags",
+    icon: Tag,
+    roles: ["admin", "redactor"],
+  },
+  {
     title: "Usuarios",
     href: "/admin/users",
     icon: Users,
+    roles: ["admin"],
+  },
+  {
+    title: "Publicidad",
+    href: "/admin/ads",
+    icon: Megaphone,
     roles: ["admin"],
   },
 ]
@@ -46,16 +59,23 @@ export function AdminSidebar({ userProfile }: AdminSidebarProps) {
   const filteredNavItems = navItems.filter((item) => item.roles.includes(userProfile.role))
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
-      <div className="p-6 border-b border-slate-200">
-        <Link href="/admin" className="flex items-center gap-2">
-          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-            <Newspaper className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="font-bold text-lg">Admin Panel</h1>
-            <p className="text-xs text-muted-foreground">Gestión de noticias</p>
-          </div>
+    <aside className="w-64 bg-card border-r border-border flex flex-col">
+      <div className="p-6 border-b border-border">
+        <Link href="/admin" className="flex items-center justify-center py-2">
+          <Image
+            src="/logo-claro.png"
+            alt="Noticias del Interior"
+            width={160}
+            height={50}
+            className="object-contain dark:hidden"
+          />
+          <Image
+            src="/logo-oscuro.png"
+            alt="Noticias del Interior"
+            width={160}
+            height={50}
+            className="object-contain hidden dark:block"
+          />
         </Link>
       </div>
 
@@ -72,7 +92,7 @@ export function AdminSidebar({ userProfile }: AdminSidebarProps) {
                 "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground"
-                  : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               <Icon className="h-5 w-5" />
@@ -82,9 +102,9 @@ export function AdminSidebar({ userProfile }: AdminSidebarProps) {
         })}
       </nav>
 
-      <div className="p-4 border-t border-slate-200">
+      <div className="p-4 border-t border-border">
         <div className="px-4 py-2 text-xs text-muted-foreground">
-          <p className="font-medium text-slate-700 mb-1">{userProfile.full_name || "Usuario"}</p>
+          <p className="font-medium text-foreground mb-1">{userProfile.full_name || "Usuario"}</p>
           <p className="truncate">{userProfile.email}</p>
           <p className="mt-1 capitalize">
             <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">

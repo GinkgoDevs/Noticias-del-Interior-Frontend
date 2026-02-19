@@ -18,7 +18,7 @@ export function NewsListItem({ category, title, source, date }: NewsListItemProp
       <div className="flex items-center gap-2">
         <time className="text-xs text-muted-foreground uppercase tracking-wider">{date}</time>
       </div>
-      <h3 className="text-balance font-medium leading-relaxed text-foreground group-hover:text-primary transition-colors">
+      <h3 className="text-balance font-medium leading-relaxed text-foreground">
         {title}
       </h3>
       <div className="flex items-center justify-between">
