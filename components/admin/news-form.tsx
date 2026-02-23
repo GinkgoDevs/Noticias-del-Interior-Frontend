@@ -20,7 +20,9 @@ import dynamic from "next/dynamic"
 import "react-quill-new/dist/quill.snow.css"
 import { SEOPreview } from "./seo-preview"
 import { uploadImageAction } from "@/lib/actions"
-
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Check, X } from "lucide-react"
 const ReactQuill = dynamic(() => import("react-quill-new"), {
   ssr: false,
   loading: () => <div className="h-[300px] w-full bg-muted animate-pulse rounded-md" />,
@@ -56,6 +58,12 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
   })
   const [isScheduled, setIsScheduled] = useState(!!initialData?.scheduledAt)
   const [showPreview, setShowPreview] = useState(false)
+  const [availableTags, setAvailableTags] = useState<any[]>(tags || [])
+  const [tagSearch, setTagSearch] = useState("")
+  const [openTags, setOpenTags] = useState(false)
+  const [availableCategories, setAvailableCategories] = useState<any[]>(categories || [])
+  const [categorySearch, setCategorySearch] = useState("")
+  const [openCategories, setOpenCategories] = useState(false)
 
   const generateSlug = (title: string) => {
     return title
@@ -72,6 +80,78 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
       title,
       slug: generateSlug(title),
     }))
+  }
+
+  const handleToggleTag = (tagId: string) => {
+    setFormData((prev) => {
+      const newTagIds = prev.tagIds.includes(tagId)
+        ? prev.tagIds.filter((id: string) => id !== tagId)
+        : [...prev.tagIds, tagId]
+      return { ...prev, tagIds: newTagIds }
+    })
+  }
+
+  const handleCreateTag = async (tagName: string) => {
+    if (!tagName.trim()) return
+
+    try {
+      setLoading(true)
+      const slug = generateSlug(tagName)
+      // Check if tag already exists
+      const exists = availableTags.find(t => t.slug === slug || t.name.toLowerCase() === tagName.toLowerCase())
+      if (exists) {
+        if (!formData.tagIds.includes(exists.id)) {
+          handleToggleTag(exists.id)
+        }
+        setTagSearch("")
+        return
+      }
+
+      const res: any = await fetchApi("/admin/tags", {
+        method: "POST",
+        body: JSON.stringify({ name: tagName, slug, active: true }),
+      })
+      const newTag = res.data || res
+      setAvailableTags(prev => [...prev, newTag])
+      setFormData(prev => ({ ...prev, tagIds: [...prev.tagIds, newTag.id] }))
+      setTagSearch("")
+    } catch (err: any) {
+      console.error(err)
+      setError("Error al crear la etiqueta")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateCategory = async (catName: string) => {
+    if (!catName.trim()) return
+
+    try {
+      setLoading(true)
+      const slug = generateSlug(catName)
+      // Check if category already exists
+      const exists = availableCategories.find(c => c.slug === slug || c.name.toLowerCase() === catName.toLowerCase())
+      if (exists) {
+        setFormData(prev => ({ ...prev, categoryId: exists.id }))
+        setCategorySearch("")
+        return
+      }
+
+      const res: any = await fetchApi("/categories", {
+        method: "POST",
+        body: JSON.stringify({ name: catName, description: "" }),
+      })
+      const newCat = res.data || res
+      setAvailableCategories(prev => [...prev, newCat])
+      setFormData(prev => ({ ...prev, categoryId: newCat.id }))
+      setCategorySearch("")
+      router.refresh() // Refrescar para que aparezca en otras partes
+    } catch (err: any) {
+      console.error(err)
+      setError("Error al crear la categoría")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -419,22 +499,68 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Categoría *</Label>
-              <Select
-                value={formData.categoryId}
-                onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openCategories} onOpenChange={setOpenCategories}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openCategories}
+                    className="w-full justify-between font-normal"
+                  >
+                    {formData.categoryId
+                      ? availableCategories.find((cat) => cat.id === formData.categoryId)?.name
+                      : "Seleccionar categoría..."}
+                    <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput
+                      placeholder="Buscar o crear categoría..."
+                      value={categorySearch}
+                      onValueChange={setCategorySearch}
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        {categorySearch.trim() !== "" ? (
+                          <div
+                            className="p-2 text-sm flex items-center gap-2 cursor-pointer hover:bg-muted text-primary font-medium"
+                            onClick={() => {
+                              handleCreateCategory(categorySearch)
+                              setOpenCategories(false)
+                            }}
+                          >
+                            <Plus className="h-4 w-4" /> Crear "{categorySearch}"
+                          </div>
+                        ) : (
+                          "No se encontraron categorías."
+                        )}
+                      </CommandEmpty>
+                      <CommandGroup className="max-h-[300px] overflow-auto">
+                        {availableCategories.map((cat) => (
+                          <CommandItem
+                            key={cat.id}
+                            value={cat.name}
+                            onSelect={() => {
+                              setFormData({ ...formData, categoryId: cat.id })
+                              setOpenCategories(false)
+                              setCategorySearch("")
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.categoryId === cat.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {cat.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
@@ -465,33 +591,97 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
             <Label className="flex items-center gap-2">
               <Star className="h-4 w-4" /> Etiquetas (Tags)
             </Label>
-            <div className="flex flex-wrap gap-2">
-              {tags?.map((tag: any) => {
-                const isSelected = formData.tagIds.includes(tag.id)
-                return (
-                  <Badge
-                    key={tag.id}
-                    variant={isSelected ? "default" : "outline"}
-                    className={cn(
-                      "cursor-pointer px-3 py-1 transition-all",
-                      isSelected
-                        ? "bg-primary text-primary-foreground scale-105 shadow-sm"
-                        : "hover:bg-muted text-muted-foreground opacity-70 hover:opacity-100"
-                    )}
-                    onClick={() => {
-                      const newTagIds = isSelected
-                        ? formData.tagIds.filter((id: string) => id !== tag.id)
-                        : [...formData.tagIds, tag.id]
-                      setFormData({ ...formData, tagIds: newTagIds })
-                    }}
-                  >
-                    {tag.name}
-                  </Badge>
-                )
-              })}
-              {(!tags || tags.length === 0) && (
-                <p className="text-xs text-muted-foreground italic">No hay etiquetas disponibles.</p>
-              )}
+
+            <div className="flex flex-col gap-3">
+              <Popover open={openTags} onOpenChange={setOpenTags}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={openTags} className="w-full justify-between sm:max-w-[400px]">
+                    Añadir etiquetas...
+                    <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full sm:max-w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput
+                      placeholder="Buscar etiqueta existente..."
+                      value={tagSearch}
+                      onValueChange={setTagSearch}
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        {tagSearch.trim() !== "" ? (
+                          <div
+                            className="p-2 text-sm flex items-center gap-2 cursor-pointer hover:bg-muted"
+                            onClick={() => {
+                              handleCreateTag(tagSearch)
+                              setOpenTags(false)
+                            }}
+                          >
+                            <Plus className="h-4 w-4" /> Crear "{tagSearch}"
+                          </div>
+                        ) : "No se encontraron etiquetas que coincidan."}
+                      </CommandEmpty>
+                      <CommandGroup className="max-h-[200px] overflow-auto">
+                        {/* We filter matching available tags and the command input handles internal search, 
+                            but we can also just let CommandItem do its default filtering */}
+                        {availableTags.map((tag) => {
+                          const isSelected = formData.tagIds.includes(tag.id)
+                          return (
+                            <CommandItem
+                              key={tag.id}
+                              value={tag.name}
+                              onSelect={() => {
+                                handleToggleTag(tag.id)
+                                setTagSearch("")
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {tag.name}
+                            </CommandItem>
+                          )
+                        })}
+                        {tagSearch.trim() !== "" && !availableTags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) && (
+                          <CommandItem
+                            value={`Crear ${tagSearch}`}
+                            onSelect={() => {
+                              handleCreateTag(tagSearch)
+                              setOpenTags(false)
+                            }}
+                            className="text-primary font-medium border-t rounded-none"
+                          >
+                            <Plus className="mr-2 h-4 w-4" /> Crear "{tagSearch}"
+                          </CommandItem>
+                        )}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              <div className="flex flex-wrap gap-2">
+                {formData.tagIds.map((tagId: string) => {
+                  const tag = availableTags.find(t => t.id === tagId)
+                  if (!tag) return null
+                  return (
+                    <Badge
+                      key={tag.id}
+                      variant="default"
+                      className="px-3 py-1 bg-primary/20 text-primary hover:bg-primary/30 border-primary/20 flex items-center gap-1 shadow-sm"
+                    >
+                      {tag.name}
+                      <X
+                        className="h-3.5 w-3.5 ml-1 cursor-pointer hover:text-red-500 transition-colors opacity-70 hover:opacity-100"
+                        onClick={() => handleToggleTag(tag.id)}
+                      />
+                    </Badge>
+                  )
+                })}
+              </div>
             </div>
           </div>
 

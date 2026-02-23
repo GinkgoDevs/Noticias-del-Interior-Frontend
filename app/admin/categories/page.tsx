@@ -15,7 +15,7 @@ export default async function CategoriesPage() {
   }
 
   // Get all categories from NestJS
-  const response = await fetchApi("/categories/admin");
+  const response = await fetchApi("/categories");
   const categories = response.data || [];
 
   return (

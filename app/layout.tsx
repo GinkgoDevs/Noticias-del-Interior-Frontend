@@ -52,7 +52,7 @@ export const metadata: Metadata = {
 
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "sonner"
-import { Footer } from "@/components/footer"
+import { ConditionalFooter } from "@/components/conditional-footer"
 
 export default function RootLayout({
   children,
@@ -73,7 +73,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Footer />
+          <ConditionalFooter />
           <div id="fb-root" suppressHydrationWarning></div>
           <Toaster position="top-center" richColors />
           <Analytics />
