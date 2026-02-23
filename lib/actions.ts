@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { API_URL } from "./api-client"
 import { z } from "zod"
 
@@ -39,7 +39,7 @@ export async function subscribeToNewsletter(prevState: NewsletterState, formData
         const data = await res.json()
 
         if (res.ok) {
-            revalidateTag('newsletter-status', 'page')
+            revalidatePath('/')
             return { success: true, message: data.message || "¡Suscripción exitosa!" }
         } else {
             return { success: false, message: data.message || "No se pudo realizar la suscripción" }
@@ -86,19 +86,20 @@ export async function createCategoryAction(prevState: CategoryState, formData: F
         const cookieStore = await cookies();
         const token = cookieStore.get('token')?.value;
 
+        const { slug, ...payload } = validatedFields.data;
         const res = await fetch(`${API_URL}/categories`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify(validatedFields.data)
+            body: JSON.stringify(payload)
         })
 
         const result = await res.json()
 
         if (res.ok) {
-            revalidateTag('categories', 'page')
+            revalidatePath('/admin/categories')
             return { success: true, message: "Categoría creada con éxito" }
         } else {
             return { success: false, message: result.message || "Error al crear categoría" }
@@ -122,7 +123,7 @@ export async function deleteCategoryAction(id: string) {
         })
 
         if (res.ok) {
-            revalidateTag('categories', 'page')
+            revalidatePath('/admin/categories')
             return { success: true, message: "Categoría eliminada" }
         } else {
             const data = await res.json()
@@ -192,7 +193,7 @@ export async function createTagAction(prevState: any, formData: FormData) {
         })
 
         if (res.ok) {
-            revalidateTag('tags', 'page')
+            revalidatePath('/admin/tags')
             return { success: true, message: "Tag creado" }
         } else {
             const data = await res.json()
@@ -217,7 +218,7 @@ export async function deleteTagAction(id: string) {
         })
 
         if (res.ok) {
-            revalidateTag('tags', 'page')
+            revalidatePath('/admin/tags')
             return { success: true, message: "Tag eliminado" }
         } else {
             return { success: false, message: "Error al eliminar" }

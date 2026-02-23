@@ -56,9 +56,10 @@ export function EditCategoryDialog({ category, onClose }: EditCategoryDialogProp
     setError(null)
 
     try {
+      const { slug, ...payload } = formData;
       await fetchApi(`/categories/${category.id}`, {
         method: "PATCH",
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       onClose()
