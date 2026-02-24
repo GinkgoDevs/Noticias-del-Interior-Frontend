@@ -76,7 +76,7 @@ export default function Home() {
 
               {/* Ad between categories */}
               <div className="py-4">
-                <AdBanner position="CONTENT" className="h-[200px]" />
+                <AdBanner position="CONTENT" className="h-[120px] md:h-[200px] w-full rounded-lg" />
               </div>
 
               {/* Sociedad */}
@@ -141,7 +141,7 @@ export default function Home() {
                   <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Publicidad</span>
                   <Link href="/anunciar" className="text-[10px] text-primary/60 hover:text-primary transition-colors font-bold">ANUNCIÁ AQUÍ</Link>
                 </div>
-                <AdBanner position="SIDEBAR" className="h-[300px] rounded-lg overflow-hidden border border-foreground/5" />
+                <AdBanner position="SIDEBAR" className="h-[250px] md:h-[300px] w-full rounded-lg overflow-hidden border border-foreground/5" />
               </div>
 
               {/* Seguinos en Redes */}
@@ -176,13 +176,13 @@ export default function Home() {
               </div>
 
               {/* Sticky Ad Banner */}
-              <div className="sticky top-28">
+              <div className="sticky top-28 hidden md:block">
                 <div className="bg-surface-dark rounded-xl p-4 border border-primary/10 shadow-lg">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Publicidad</span>
-                    <Link href="#" className="text-[10px] text-primary/60 hover:text-primary transition-colors font-bold">ANUNCIÁ AQUÍ</Link>
+                    <Link href="/anunciar" className="text-[10px] text-primary/60 hover:text-primary transition-colors font-bold">ANUNCIÁ AQUÍ</Link>
                   </div>
-                  <AdBanner position="SIDEBAR" className="h-[600px] rounded-lg overflow-hidden border border-foreground/5" />
+                  <AdBanner position="SIDEBAR" className="h-[500px] lg:h-[600px] w-full rounded-lg overflow-hidden border border-foreground/5" />
                 </div>
               </div>
             </aside>

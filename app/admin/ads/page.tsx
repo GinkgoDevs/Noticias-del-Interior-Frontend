@@ -42,7 +42,8 @@ import {
     X,
     Calendar,
     Clock,
-    TrendingUp
+    TrendingUp,
+    Pencil
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import Image from 'next/image'
@@ -62,11 +63,12 @@ interface Ad {
 }
 
 const POSITIONS = [
-    { value: 'HEADER', label: 'Cabecera (Top)' },
-    { value: 'SIDEBAR', label: 'Barra lateral' },
-    { value: 'NEWS_LIST', label: 'Lista de noticias' },
-    { value: 'CONTENT', label: 'Dentro de noticia' },
-    { value: 'FOOTER', label: 'Pie de página' },
+    { value: 'HEADER', label: 'Cabecera superior (Recomendado: 728×90 px o 970×90 px)' },
+    { value: 'SIDEBAR', label: 'Barra lateral de Inicio (Recomendado: 300×250 o 300×600 px)' },
+    { value: 'ARTICLE_SIDEBAR', label: 'Barra lateral de Noticia (Recomendado: 300×250 o 300×600 px)' },
+    { value: 'NEWS_LIST', label: 'Lista de noticias (Recomendado: 728×90 px)' },
+    { value: 'CONTENT', label: 'Dentro de la noticia (Recomendado: 728×90 o 300×250 px)' },
+    { value: 'FOOTER', label: 'Pie de página (Recomendado: 728×90 px)' },
 ]
 
 export default function AdsAdminPage() {
@@ -75,10 +77,10 @@ export default function AdsAdminPage() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [uploading, setUploading] = useState(false)
+    const [editingAdId, setEditingAdId] = useState<string | null>(null)
     const { toast } = useToast()
 
-    // Form state
-    const [formData, setFormData] = useState({
+    const defaultForm = {
         title: '',
         imageUrl: '',
         linkUrl: '',
@@ -86,7 +88,10 @@ export default function AdsAdminPage() {
         isActive: true,
         startDate: '',
         endDate: ''
-    })
+    }
+
+    // Form state
+    const [formData, setFormData] = useState(defaultForm)
 
     useEffect(() => {
         fetchAds()
@@ -143,8 +148,14 @@ export default function AdsAdminPage() {
         setIsSubmitting(true)
         try {
             const token = localStorage.getItem('token')
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/ads`, {
-                method: 'POST',
+            const url = editingAdId
+                ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/ads/${editingAdId}`
+                : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/v1'}/ads`
+
+            const method = editingAdId ? 'PATCH' : 'POST'
+
+            const res = await fetch(url, {
+                method,
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -153,13 +164,17 @@ export default function AdsAdminPage() {
             })
 
             if (res.ok) {
-                toast({ title: "Publicidad creada exitosamente" })
+                toast({ title: editingAdId ? "Publicidad actualizada" : "Publicidad creada exitosamente" })
                 setIsModalOpen(false)
-                setFormData({ title: '', imageUrl: '', linkUrl: '', position: 'NEWS_LIST', isActive: true, startDate: '', endDate: '' })
+                setFormData(defaultForm)
+                setEditingAdId(null)
                 fetchAds()
+            } else {
+                const err = await res.json()
+                toast({ title: err.message || "Error al guardar", variant: "destructive" })
             }
         } catch (error) {
-            toast({ title: "Error al crear", variant: "destructive" })
+            toast({ title: "Error al guardar", variant: "destructive" })
         } finally {
             setIsSubmitting(false)
         }
@@ -204,16 +219,25 @@ export default function AdsAdminPage() {
                     <h1 className="text-3xl font-serif font-bold tracking-tight">Publicidad</h1>
                     <p className="text-muted-foreground">Gestiona los banners y anuncios de la web</p>
                 </div>
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <Dialog open={isModalOpen} onOpenChange={(open) => {
+                    setIsModalOpen(open)
+                    if (!open) {
+                        setEditingAdId(null)
+                        setFormData(defaultForm)
+                    }
+                }}>
                     <DialogTrigger asChild>
-                        <Button className="gap-2">
+                        <Button className="gap-2" onClick={() => {
+                            setEditingAdId(null)
+                            setFormData(defaultForm)
+                        }}>
                             <Plus className="h-4 w-4" />
                             Nueva Publicidad
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
-                            <DialogTitle>Añadir Anuncio</DialogTitle>
+                            <DialogTitle>{editingAdId ? "Editar Anuncio" : "Añadir Anuncio"}</DialogTitle>
                         </DialogHeader>
                         <form onSubmit={handleSubmit} className="space-y-4 py-4">
                             <div className="space-y-2">
@@ -257,7 +281,7 @@ export default function AdsAdminPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 <div className="space-y-2">
                                     <Label>Posición</Label>
                                     <Select
@@ -319,7 +343,7 @@ export default function AdsAdminPage() {
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
                                 <Button type="submit" disabled={isSubmitting || uploading}>
-                                    {isSubmitting ? "Creando..." : "Guardar Anuncio"}
+                                    {isSubmitting ? "Guardando..." : "Guardar Anuncio"}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -413,11 +437,21 @@ export default function AdsAdminPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {ad.linkUrl && (
-                                                <Button variant="outline" size="icon" asChild>
-                                                    <a href={ad.linkUrl} target="_blank"><ExternalLink className="h-4 w-4" /></a>
-                                                </Button>
-                                            )}
+                                            <Button variant="outline" size="icon" onClick={() => {
+                                                setEditingAdId(ad.id)
+                                                setFormData({
+                                                    title: ad.title,
+                                                    imageUrl: ad.imageUrl,
+                                                    linkUrl: ad.linkUrl || '',
+                                                    position: ad.position as any,
+                                                    isActive: ad.isActive,
+                                                    startDate: ad.startDate || '',
+                                                    endDate: ad.endDate || ''
+                                                })
+                                                setIsModalOpen(true)
+                                            }}>
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
                                             <Button variant="destructive" size="icon" onClick={() => deleteAd(ad.id)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

@@ -213,6 +213,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               dangerouslySetInnerHTML={{ __html: article.content }}
             />
 
+            {/* Ad in content */}
+            <div className="my-10 w-full">
+              <AdBanner position="CONTENT" className="h-[120px] md:h-[200px] w-full rounded-lg" />
+            </div>
+
             {/* Galería de Imágenes Premium */}
             {article.images && article.images.length > 0 && (
               <div className="mt-16 pt-12 border-t border-border/50">
@@ -316,13 +321,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             </div>
 
             {/* Banner publicitario Dinámico - sticky */}
-            <div className="sticky top-28">
+            <div className="sticky top-28 hidden md:block">
               <div className="bg-surface-dark rounded-xl p-4 border border-primary/10 shadow-lg">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Publicidad</span>
                   <Link href="/anunciar" className="text-[10px] text-primary/60 hover:text-primary transition-colors font-bold">ANUNCIÁ AQUÍ</Link>
                 </div>
-                <AdBanner position="SIDEBAR" className="h-[300px] rounded-lg overflow-hidden border border-foreground/5" />
+                <AdBanner position="ARTICLE_SIDEBAR" className="h-[250px] lg:h-[300px] w-full rounded-lg overflow-hidden border border-foreground/5" />
               </div>
             </div>
           </aside>
