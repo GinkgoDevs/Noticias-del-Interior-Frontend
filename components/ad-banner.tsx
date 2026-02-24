@@ -14,11 +14,12 @@ interface Ad {
 }
 
 interface AdBannerProps {
-    position: 'HEADER' | 'SIDEBAR' | 'NEWS_LIST' | 'CONTENT' | 'FOOTER'
+    position: 'HEADER' | 'SIDEBAR' | 'ARTICLE_SIDEBAR' | 'NEWS_LIST' | 'CONTENT' | 'FOOTER'
     className?: string
+    fallback?: React.ReactNode
 }
 
-export function AdBanner({ position, className }: AdBannerProps) {
+export function AdBanner({ position, className, fallback }: AdBannerProps) {
     const [ad, setAd] = useState<Ad | null>(null)
     const [loading, setLoading] = useState(true)
 
@@ -55,7 +56,7 @@ export function AdBanner({ position, className }: AdBannerProps) {
         return <Skeleton className={`w-full bg-muted/20 animate-pulse ${className}`} />
     }
 
-    if (!ad) return null
+    if (!ad) return <>{fallback ? fallback : null}</>
 
     const content = (
         <div
@@ -67,7 +68,7 @@ export function AdBanner({ position, className }: AdBannerProps) {
                 alt={ad.title}
                 width={1200}
                 height={400}
-                className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-md text-[10px] text-white px-1.5 py-0.5 rounded font-medium tracking-widest uppercase">
                 Publicidad
@@ -77,7 +78,7 @@ export function AdBanner({ position, className }: AdBannerProps) {
 
     if (ad.linkUrl) {
         return (
-            <Link href={ad.linkUrl} target="_blank" rel="noopener noreferrer">
+            <Link href={ad.linkUrl} target="_blank" rel="noopener noreferrer" className={`block ${className}`}>
                 {content}
             </Link>
         )

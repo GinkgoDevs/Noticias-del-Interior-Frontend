@@ -4,6 +4,7 @@ import { Cloud, ArrowDown, ArrowUp, Zap, ExternalLink } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { AdBanner } from "./ad-banner"
 
 interface DollarRate {
   name: string
@@ -98,7 +99,7 @@ export function InfoBar() {
         {/* Desktop Version */}
         <div className="hidden lg:flex">
           {/* Weather Section */}
-          <div className="flex-1 flex items-center py-4 pr-8 border-r border-foreground/10">
+          <div className="flex items-center py-4 pr-8 border-r border-foreground/10">
             <div className="flex items-center space-x-6">
               <div className="flex items-center">
                 <div className="mr-8">
@@ -162,17 +163,25 @@ export function InfoBar() {
           </div>
 
           {/* Advertising Section */}
-          <div className="flex-shrink-0 bg-[#FFD700] hover:bg-[#FFC000] transition-colors cursor-pointer flex items-center px-10 relative overflow-hidden group">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-            <div className="relative z-10 flex flex-col items-center">
-              <span className="text-black font-black text-lg tracking-tighter leading-none uppercase">Publicidad</span>
-              <span className="text-[10px] text-black/60 font-bold uppercase tracking-widest mt-1">Espacio disponible</span>
-            </div>
-            <div className="ml-6 relative z-10 hidden xl:block">
-              <div className="border-2 border-black/20 p-2 rounded text-black text-xs font-bold flex items-center">
-                ANUNCIÁ AQUÍ <Zap className="h-3 w-3 ml-2" />
-              </div>
-            </div>
+          <div className="flex-1 min-w-[300px] flex items-stretch">
+            <AdBanner
+              position="HEADER"
+              className="w-full h-full rounded-none border-0"
+              fallback={
+                <div className="w-full h-full bg-[#FFD700] hover:bg-[#FFC000] transition-colors cursor-pointer flex items-center px-10 relative overflow-hidden group">
+                  <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+                  <div className="relative z-10 flex flex-col items-center justify-center w-full">
+                    <span className="text-black font-black text-lg tracking-tighter leading-none uppercase">Publicidad</span>
+                    <span className="text-[10px] text-black/60 font-bold uppercase tracking-widest mt-1">Espacio disponible</span>
+                  </div>
+                  <div className="ml-6 relative z-10 hidden xl:flex items-center">
+                    <div className="border-2 border-black/20 p-2 rounded text-black text-xs font-bold flex items-center">
+                      ANUNCIÁ AQUÍ <Zap className="h-3 w-3 ml-2" />
+                    </div>
+                  </div>
+                </div>
+              }
+            />
           </div>
         </div>
       </div>
