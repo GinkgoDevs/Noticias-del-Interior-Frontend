@@ -20,7 +20,7 @@ export default async function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Categorías</h1>
           <p className="text-muted-foreground mt-1">Organiza tus noticias por categorías</p>

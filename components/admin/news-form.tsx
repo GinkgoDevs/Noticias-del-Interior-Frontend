@@ -23,6 +23,7 @@ import { uploadImageAction } from "@/lib/actions"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, X } from "lucide-react"
+import { toast } from "sonner"
 const ReactQuill = dynamic(() => import("react-quill-new"), {
   ssr: false,
   loading: () => <div className="h-[300px] w-full bg-muted animate-pulse rounded-md" />,
@@ -118,6 +119,7 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
     } catch (err: any) {
       console.error(err)
       setError("Error al crear la etiqueta")
+      toast.error("Error al crear la etiqueta", { position: "top-center" })
     } finally {
       setLoading(false)
     }
@@ -149,6 +151,7 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
     } catch (err: any) {
       console.error(err)
       setError("Error al crear la categoría")
+      toast.error("Error al crear la categoría", { position: "top-center" })
     } finally {
       setLoading(false)
     }
@@ -175,7 +178,9 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
         mainImageId: res.data.publicId
       }));
     } catch (err: any) {
-      setError("Error al subir la imagen: " + (err.message || ""));
+      const errorMsg = "Error al subir la imagen: " + (err.message || "")
+      setError(errorMsg);
+      toast.error(errorMsg, { position: "top-center" });
       console.error(err);
     } finally {
       setUploading(false);
@@ -208,7 +213,9 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
         images: [...prev.images, ...uploadedImages]
       }));
     } catch (err: any) {
-      setError("Error al subir imágenes a la galería: " + (err.message || ""));
+      const errorMsg = "Error al subir imágenes a la galería: " + (err.message || "")
+      setError(errorMsg)
+      toast.error(errorMsg, { position: "top-center" })
     } finally {
       setUploading(false);
     }
@@ -223,6 +230,28 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!formData.title.trim()) {
+      toast.error("El título es obligatorio.", { position: "top-center", duration: 3000 })
+      return
+    }
+
+    const strippedContent = formData.content.replace(/<[^>]*>?/gm, '').trim()
+    if (!strippedContent) {
+      toast.error("El contenido de la noticia es obligatorio.", { position: "top-center", duration: 3000 })
+      return
+    }
+
+    if (!formData.categoryId) {
+      toast.error("Debes clasificar la noticia y elegir una categoría.", { position: "top-center", duration: 3000 })
+      return
+    }
+
+    if (!formData.status) {
+      toast.error("Debes asignar un estado a la noticia.", { position: "top-center", duration: 3000 })
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -239,7 +268,9 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
         // Asegurar formato ISO 8601 completo
         payload.scheduledAt = new Date(formData.scheduledAt).toISOString();
       } catch (e) {
-        setError("Fecha de programación inválida");
+        const errorMsg = "Fecha de programación inválida";
+        setError(errorMsg);
+        toast.error(errorMsg, { position: "top-center" });
         setLoading(false);
         return;
       }
@@ -252,18 +283,22 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
           method: "PATCH",
           body: JSON.stringify(payload),
         });
+        toast.success("Noticia actualizada exitosamente", { position: "top-center" })
       } else {
         // Create new news
         await fetchApi("/admin/news", {
           method: "POST",
           body: JSON.stringify(payload),
         });
+        toast.success("Noticia creada exitosamente", { position: "top-center" })
       }
 
       router.push("/admin/news")
       router.refresh()
     } catch (err: any) {
-      setError(err.message || "Error al guardar la noticia")
+      const errorMsg = err.message || "Error al guardar la noticia"
+      setError(errorMsg)
+      toast.error(errorMsg, { position: "top-center", duration: 4000 })
     } finally {
       setLoading(false)
     }
@@ -496,7 +531,7 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Categoría *</Label>
               <Popover open={openCategories} onOpenChange={setOpenCategories}>
@@ -740,19 +775,19 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4 pt-4 border-t">
-            <div className="flex items-center gap-4">
-              <Button type="submit" disabled={loading || uploading} className={cn(isScheduled && "bg-orange-600 hover:bg-orange-700")}>
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-4 border-t">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <Button type="submit" disabled={loading || uploading} className={cn("w-full sm:w-auto", isScheduled && "bg-orange-600 hover:bg-orange-700")}>
                 {loading ? "Guardando..." :
                   isScheduled ? "Programar Noticia" :
                     initialData ? "Actualizar Noticia" : "Crear Noticia"}
               </Button>
-              <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading} className="w-full sm:w-auto">
                 Cancelar
               </Button>
             </div>
 
-            <Button type="button" variant="secondary" onClick={() => setShowPreview(true)} className="flex items-center gap-2">
+            <Button type="button" variant="secondary" onClick={() => setShowPreview(true)} className="flex items-center justify-center gap-2 w-full md:w-auto">
               <Eye className="h-4 w-4" /> Vista Previa
             </Button>
           </div>

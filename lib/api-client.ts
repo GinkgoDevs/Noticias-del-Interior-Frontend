@@ -23,14 +23,17 @@ export async function fetchApi(endpoint: string, options: FetchOptions = {}) {
 
         if (token === 'undefined') token = undefined;
     } else {
-        // Server side: get from next/headers using dynamic import to avoid client-side bundle errors
+        // Server side: get from next/headers
         try {
             const { cookies } = await import('next/headers');
             const cookieStore = await cookies();
             token = cookieStore.get('token')?.value;
             if (token === 'undefined') token = undefined;
-        } catch (error) {
-            console.error('Error accessing cookies on server:', error);
+        } catch (error: any) {
+            // Suppress "Dynamic server usage" logs during build as it's normal Next.js behavior
+            if (!error.message?.includes('Dynamic server usage')) {
+                console.error('Error accessing cookies on server:', error);
+            }
         }
     }
 

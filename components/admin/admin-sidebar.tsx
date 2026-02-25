@@ -12,6 +12,8 @@ interface AdminSidebarProps {
     full_name: string | null
     email: string
   }
+  className?: string
+  onNavClick?: () => void
 }
 
 const navItems = [
@@ -53,13 +55,13 @@ const navItems = [
   },
 ]
 
-export function AdminSidebar({ userProfile }: AdminSidebarProps) {
+export function AdminSidebar({ userProfile, className, onNavClick }: AdminSidebarProps) {
   const pathname = usePathname()
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(userProfile.role))
 
   return (
-    <aside className="w-64 bg-card border-r border-border flex flex-col">
+    <aside className={cn("w-64 bg-card border-r border-border flex flex-col h-full", className)}>
       <div className="p-6 border-b border-border">
         <Link href="/admin" className="flex items-center justify-center py-2">
           <Image
@@ -88,6 +90,7 @@ export function AdminSidebar({ userProfile }: AdminSidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavClick}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
                 isActive

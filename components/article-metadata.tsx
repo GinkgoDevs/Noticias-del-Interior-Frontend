@@ -21,12 +21,12 @@ export function generateArticleMetadata({
   author,
   category,
 }: ArticleMetadataProps): Metadata {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://noticiasdelinterior.com.ar"
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://noticiasdelinterior.site").replace(/\/$/, "")
   const fullUrl = `${siteUrl}${url}`
-  const imageUrl = image.startsWith("http") ? image : `${siteUrl}${image}`
+  const imageUrl = image ? (image.startsWith("http") ? image : `${siteUrl}${image}`) : `${siteUrl}/logo-claro.png`
 
   return {
-    title: `${title} | Noticias del Interior`,
+    title: title,
     description,
     openGraph: {
       title,
@@ -36,9 +36,11 @@ export function generateArticleMetadata({
       images: [
         {
           url: imageUrl,
+          secureUrl: imageUrl,
           width: 1200,
           height: 630,
           alt: title,
+          type: "image/jpeg",
         },
       ],
       locale: "es_AR",
@@ -59,8 +61,9 @@ export function generateArticleMetadata({
     alternates: {
       canonical: fullUrl,
     },
-    other: {
-      "fb:app_id": process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || "",
+    other: {},
+    facebook: {
+      appId: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || "",
     },
   }
 }
@@ -75,9 +78,9 @@ export function generateArticleJSONLD({
   author,
   category,
 }: ArticleMetadataProps) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://noticiasdelinterior.com.ar"
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://noticiasdelinterior.site").replace(/\/$/, "")
   const fullUrl = `${siteUrl}${url}`
-  const imageUrl = image.startsWith("http") ? image : `${siteUrl}${image}`
+  const imageUrl = image ? (image.startsWith("http") ? image : `${siteUrl}${image}`) : `${siteUrl}/logo-claro.png`
 
   return {
     "@context": "https://schema.org",
@@ -96,7 +99,7 @@ export function generateArticleJSONLD({
       name: "Noticias del Interior",
       logo: {
         "@type": "ImageObject",
-        url: `${siteUrl}/logo.png`,
+        url: `${siteUrl}/logo-claro.png`,
       },
     },
     mainEntityOfPage: {
