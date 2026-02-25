@@ -140,7 +140,7 @@ export default async function AdminDashboard() {
           {stats.recent && stats.recent.length > 0 ? (
             <div className="space-y-4">
               {stats.recent.map((news: any) => (
-                <div key={news.id} className="flex items-start justify-between border-b border-border pb-4 last:border-0 hover:bg-muted/50 p-2 rounded-lg transition-colors">
+                <div key={news.id} className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-4 last:border-0 hover:bg-muted/50 p-2 rounded-lg transition-colors gap-2">
                   <div className="space-y-1">
                     <h3 className="font-medium">{news.title}</h3>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">

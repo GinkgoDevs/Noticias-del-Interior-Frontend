@@ -32,13 +32,25 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://noticiasdelinterior.site").replace(/\/$/, "")
+
   try {
     const response = await fetchApi(`/news/${slug}`, {
       next: { tags: [`news-${slug}`], revalidate: 3600 }
     });
     const article = response.data;
 
-    if (!article) return { title: "Noticia no encontrada" };
+    if (!article) {
+      return {
+        title: "Noticia no encontrada",
+        description: "Lo sentimos, no pudimos encontrar la noticia que estás buscando.",
+        openGraph: {
+          title: "Noticia no encontrada | Noticias del Interior",
+          description: "Explora las últimas noticias del interior argentino.",
+          images: [`${siteUrl}/logo-claro.png`],
+        }
+      };
+    }
 
     return generateArticleMetadata({
       title: article.seoTitle || article.title,
@@ -50,7 +62,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       category: article.category?.name || "Actualidad",
     })
   } catch (error) {
-    return { title: "Noticia no encontrada" }
+    return {
+      title: "Noticia no encontrada",
+      description: "Lo sentimos, no pudimos encontrar la noticia que estás buscando.",
+      openGraph: {
+        title: "Noticia no encontrada | Noticias del Interior",
+        description: "Explora las últimas noticias del interior argentino.",
+        images: [`${siteUrl}/logo-claro.png`],
+      }
+    }
   }
 }
 

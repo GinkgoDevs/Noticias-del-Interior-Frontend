@@ -3,6 +3,7 @@
 import { Cloud, ArrowDown, ArrowUp, Zap, ExternalLink } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { AdBanner } from "./ad-banner"
 
@@ -168,18 +169,28 @@ export function InfoBar() {
               position="HEADER"
               className="w-full h-full rounded-none border-0"
               fallback={
-                <div className="w-full h-full bg-[#FFD700] hover:bg-[#FFC000] transition-colors cursor-pointer flex items-center px-10 relative overflow-hidden group">
-                  <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+                <Link
+                  href={`https://wa.me/5493815558117?text=${encodeURIComponent("Hola, quiero publicitar mi marca en Noticias del Interior.")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full h-full bg-[#FFCE00] hover:bg-[#FFE000] transition-colors cursor-pointer flex items-center justify-between px-6 xl:px-12 relative overflow-hidden group"
+                >
                   <div className="relative z-10 flex flex-col items-center justify-center w-full">
-                    <span className="text-black font-black text-lg tracking-tighter leading-none uppercase">Publicidad</span>
-                    <span className="text-[10px] text-black/60 font-bold uppercase tracking-widest mt-1">Espacio disponible</span>
+                    <span className="text-black font-black text-xl xl:text-3xl tracking-tighter leading-none uppercase">Publicidad</span>
+                    <span className="text-[9px] xl:text-[11px] text-black/70 font-bold uppercase tracking-[0.2em] mt-1">Espacio disponible</span>
                   </div>
-                  <div className="ml-6 relative z-10 hidden xl:flex items-center">
-                    <div className="border-2 border-black/20 p-2 rounded text-black text-xs font-bold flex items-center">
-                      ANUNCIÁ AQUÍ <Zap className="h-3 w-3 ml-2" />
+                  <div className="ml-4 xl:ml-6 relative z-10 hidden md:flex items-center shrink-0">
+                    <div className="border border-black/80 group-hover:bg-black group-hover:text-[#FFCE00] transition-all duration-300 p-2 xl:px-4 xl:py-2 text-black text-[9px] xl:text-[10px] font-bold tracking-widest uppercase flex items-center gap-2 rounded-sm text-left leading-tight">
+                      <span>Anunciá<br />Aquí</span>
+                      <svg className="w-4 h-4 xl:w-5 xl:h-5 opacity-90 -rotate-45" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
+                        <path d="M13 5v2"></path>
+                        <path d="M13 17v2"></path>
+                        <path d="M13 11v2"></path>
+                      </svg>
                     </div>
                   </div>
-                </div>
+                </Link>
               }
             />
           </div>

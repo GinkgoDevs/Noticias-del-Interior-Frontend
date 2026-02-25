@@ -26,27 +26,56 @@ const workSans = Work_Sans({
 })
 
 export const metadata: Metadata = {
-  title: "Noticias del Interior - Información de calidad",
+  title: {
+    default: "Noticias del Interior - Información de calidad",
+    template: "%s | Noticias del Interior"
+  },
   description: "El portal de noticias más completo del interior argentino. Política, deportes, economía y más",
+  metadataBase: new URL((process.env.NEXT_PUBLIC_SITE_URL || "https://noticiasdelinterior.site").replace(/\/$/, "")),
+  alternates: {
+    canonical: "./",
+  },
+  openGraph: {
+    title: "Noticias del Interior",
+    description: "Información de calidad sobre todo lo que pasa en el interior argentino.",
+    url: "./",
+    siteName: "Noticias del Interior",
+    images: [
+      {
+        url: "/logo-claro.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: "es_AR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Noticias del Interior",
+    description: "Información de calidad sobre todo lo que pasa en el interior argentino.",
+    images: ["/logo-claro.png"],
+  },
   icons: {
     icon: [
       {
-        url: "/logo.png",
+        url: "/logo-claro.png",
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: "/logo.png",
+        url: "/logo-claro.png",
         media: "(prefers-color-scheme: dark)",
       },
       {
-        url: "/logo.png",
+        url: "/logo-claro.png",
         type: "image/png",
       },
     ],
-    apple: "/logo.png",
+    apple: "/logo-claro.png",
   },
-  other: {
-    "fb:app_id": process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || "",
+  other: {},
+  facebook: {
+    appId: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || "",
   },
 }
 
@@ -77,13 +106,6 @@ export default function RootLayout({
           <div id="fb-root" suppressHydrationWarning></div>
           <Toaster position="top-center" richColors />
           <Analytics />
-          {/* Facebook SDK */}
-          <Script
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-            src={`https://connect.facebook.net/es_LA/sdk.js#xfbml=1&version=v18.0${process.env.NEXT_PUBLIC_FACEBOOK_APP_ID ? `&appId=${process.env.NEXT_PUBLIC_FACEBOOK_APP_ID}` : ""}`}
-            nonce="NDI_FB_SDK"
-          />
         </ThemeProvider>
       </body>
     </html>

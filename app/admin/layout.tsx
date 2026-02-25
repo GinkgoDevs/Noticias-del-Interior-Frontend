@@ -13,7 +13,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex fixed inset-0 z-0 overflow-hidden bg-background">
-      <AdminSidebar userProfile={profile} />
+      <div className="hidden md:flex h-full">
+        <AdminSidebar userProfile={profile} />
+      </div>
       <div className="flex-1 flex flex-col min-w-0">
         <AdminHeader userProfile={profile} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background/50">{children}</main>

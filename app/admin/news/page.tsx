@@ -43,7 +43,7 @@ export default async function NewsPage(props: {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Noticias</h1>
           <p className="text-muted-foreground mt-1">Gestiona todas tus noticias</p>
@@ -58,9 +58,9 @@ export default async function NewsPage(props: {
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle>Listado de Noticias</CardTitle>
-            <Tabs defaultValue={isTrash ? "trash" : "active"} className="w-[400px]">
+            <Tabs defaultValue={isTrash ? "trash" : "active"} className="w-full sm:w-[400px]">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="active" asChild>
                   <Link href="/admin/news">
