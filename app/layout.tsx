@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Outfit, Playfair_Display, Work_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
+import "react-quill-new/dist/quill.snow.css"
 import Head from "next/head"
 import Script from "next/script"
 

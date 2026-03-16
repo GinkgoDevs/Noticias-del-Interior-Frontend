@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { fetchApi, API_URL } from "@/lib/api-client"
 import { cn } from "@/lib/utils"
@@ -65,6 +65,57 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
   const [availableCategories, setAvailableCategories] = useState<any[]>(categories || [])
   const [categorySearch, setCategorySearch] = useState("")
   const [openCategories, setOpenCategories] = useState(false)
+
+  // 1. Cargar borrador desde localStorage al montar (solo para nueva noticia)
+  useEffect(() => {
+    if (!initialData) {
+      const savedDraft = localStorage.getItem("noticia-interior-draft")
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft)
+          // Combinamos con precaución para no sobreescribir campos si el schema cambia
+          setFormData((prev) => ({
+            ...prev,
+            ...parsed,
+          }))
+          toast.info("Borrador recuperado automáticamente")
+        } catch (e) {
+          console.error("Error cargando borrador", e)
+        }
+      }
+    }
+  }, [initialData])
+
+  // 2. Guardar en localStorage cada vez que cambia (solo para nueva noticia)
+  useEffect(() => {
+    if (!initialData) {
+      const timer = setTimeout(() => {
+        localStorage.setItem("noticia-interior-draft", JSON.stringify(formData))
+      }, 1000) // Debounce de 1s para no saturar storage
+      return () => clearTimeout(timer)
+    }
+  }, [formData, initialData])
+
+  // 3. Manejo del botón atrás para cerrar previsualización en móviles
+  useEffect(() => {
+    if (showPreview) {
+      // Añadimos una entrada al historial para la previsualización
+      window.history.pushState({ preview: true }, "")
+
+      const handlePopState = () => {
+        setShowPreview(false)
+      }
+
+      window.addEventListener("popstate", handlePopState)
+      return () => {
+        window.removeEventListener("popstate", handlePopState)
+        // Si se cierra manualmente (no por popstate), limpiamos la entrada del historial extra
+        if (window.history.state?.preview) {
+          window.history.back()
+        }
+      }
+    }
+  }, [showPreview])
 
   const generateSlug = (title: string) => {
     return title
@@ -293,6 +344,9 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
         toast.success("Noticia creada exitosamente", { position: "top-center" })
       }
 
+      if (!initialData) {
+        localStorage.removeItem("noticia-interior-draft")
+      }
       router.push("/admin/news")
       router.refresh()
     } catch (err: any) {
@@ -305,496 +359,497 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Card>
-        <CardContent className="pt-6 space-y-6">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+    <>
+      <form onSubmit={handleSubmit}>
+        <Card>
+          <CardContent className="pt-6 space-y-6">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="title">Título *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              placeholder="Título de la noticia"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="slug">Slug</Label>
-            <Input
-              id="slug"
-              value={formData.slug}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              placeholder="url-de-la-noticia"
-            />
-            <p className="text-xs text-muted-foreground">Se genera automáticamente desde el título</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="excerpt">Extracto</Label>
-            <Textarea
-              id="excerpt"
-              value={formData.excerpt}
-              onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
-              placeholder="Breve descripción de la noticia"
-              rows={2}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Contenido *</Label>
-            <div className="min-h-[400px] border rounded-md overflow-hidden bg-white text-black">
-              <ReactQuill
-                theme="snow"
-                value={formData.content}
-                onChange={(content) => setFormData({ ...formData, content })}
-                modules={{
-                  toolbar: [
-                    [{ header: [1, 2, 3, false] }],
-                    ["bold", "italic", "underline", "strike"],
-                    [{ list: "ordered" }, { list: "bullet" }],
-                    ["link", "image"],
-                    ["clean"],
-                  ],
-                }}
-                className="h-[350px]"
+            <div className="space-y-2">
+              <Label htmlFor="title">Título *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder="Título de la noticia"
+                required
               />
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Usa el editor para dar formato a tu noticia.</p>
-          </div>
 
-          <Separator className="my-8" />
-
-          <SEOPreview
-            title={formData.title}
-            slug={formData.slug}
-            excerpt={formData.excerpt}
-            seoTitle={formData.seoTitle}
-            seoDescription={formData.seoDescription}
-          />
-
-          <div className="bg-primary/5 p-4 rounded-lg border border-primary/10 space-y-4">
-            <h4 className="text-sm font-bold flex items-center gap-2 text-primary">
-              <Globe className="h-4 w-4" /> Personalización SEO (Opcional)
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="seoTitle" className="text-xs">Título SEO</Label>
-                <Input
-                  id="seoTitle"
-                  value={formData.seoTitle}
-                  onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
-                  placeholder="Personaliza el título para buscadores"
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="seoDescription" className="text-xs">Descripción SEO</Label>
-                <Textarea
-                  id="seoDescription"
-                  value={formData.seoDescription}
-                  onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
-                  placeholder="Personaliza la meta-descripción"
-                  className="min-h-[32px] text-sm py-1"
-                  rows={1}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="slug">Slug</Label>
+              <Input
+                id="slug"
+                value={formData.slug}
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                placeholder="url-de-la-noticia"
+              />
+              <p className="text-xs text-muted-foreground">Se genera automáticamente desde el título</p>
             </div>
-          </div>
 
-          <div className="space-y-4">
-            <Label>Imagen destacada principal</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    disabled={uploading}
-                    className="flex-1 cursor-pointer"
-                  />
-                  {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                </div>
-                <p className="text-xs text-muted-foreground">Esta imagen aparecerá en los listados y en la cabecera de la noticia.</p>
+            <div className="space-y-2">
+              <Label htmlFor="excerpt">Extracto</Label>
+              <Textarea
+                id="excerpt"
+                value={formData.excerpt}
+                onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                placeholder="Breve descripción de la noticia"
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Contenido *</Label>
+              <div className="min-h-[400px] border rounded-md overflow-hidden bg-white text-black">
+                <ReactQuill
+                  theme="snow"
+                  value={formData.content}
+                  onChange={(content) => setFormData({ ...formData, content })}
+                  modules={{
+                    toolbar: [
+                      [{ header: [1, 2, 3, false] }],
+                      ["bold", "italic", "underline", "strike"],
+                      [{ list: "ordered" }, { list: "bullet" }],
+                      ["link", "image"],
+                      ["clean"],
+                    ],
+                  }}
+                  className="h-[350px]"
+                />
               </div>
+              <p className="text-xs text-muted-foreground mt-2">Usa el editor para dar formato a tu noticia.</p>
+            </div>
 
-              {formData.mainImageUrl && (
+            <Separator className="my-8" />
+
+            <SEOPreview
+              title={formData.title}
+              slug={formData.slug}
+              excerpt={formData.excerpt}
+              seoTitle={formData.seoTitle}
+              seoDescription={formData.seoDescription}
+            />
+
+            <div className="bg-primary/5 p-4 rounded-lg border border-primary/10 space-y-4">
+              <h4 className="text-sm font-bold flex items-center gap-2 text-primary">
+                <Globe className="h-4 w-4" /> Personalización SEO (Opcional)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <div className="relative group rounded-lg border overflow-hidden bg-muted aspect-video">
-                    <img
-                      src={formData.mainImageUrl || "/placeholder.svg"}
-                      alt="Preview"
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setFormData({ ...formData, mainImageUrl: '', mainImageId: '', mainImageCaption: '' })}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" /> Eliminar
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Type className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input
-                      value={formData.mainImageCaption}
-                      onChange={(e) => setFormData({ ...formData, mainImageCaption: e.target.value })}
-                      placeholder="Pie de foto: Ej. Foto: Juan Pérez / Fuente"
-                      className="h-8 text-xs"
-                    />
-                  </div>
+                  <Label htmlFor="seoTitle" className="text-xs">Título SEO</Label>
+                  <Input
+                    id="seoTitle"
+                    value={formData.seoTitle}
+                    onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
+                    placeholder="Personaliza el título para buscadores"
+                    className="h-8 text-sm"
+                  />
                 </div>
-              )}
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base font-bold flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5 text-primary" /> Galería de Imágenes
-                </Label>
-                <p className="text-xs text-muted-foreground">Añade fotos adicionales para crear una galería dentro de la nota.</p>
+                <div className="space-y-2">
+                  <Label htmlFor="seoDescription" className="text-xs">Descripción SEO</Label>
+                  <Textarea
+                    id="seoDescription"
+                    value={formData.seoDescription}
+                    onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
+                    placeholder="Personaliza la meta-descripción"
+                    className="min-h-[32px] text-sm py-1"
+                    rows={1}
+                  />
+                </div>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => document.getElementById('gallery-upload')?.click()}
-                disabled={uploading}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Añadir Fotos
-              </Button>
-              <input
-                id="gallery-upload"
-                type="file"
-                multiple
-                accept="image/*"
-                className="hidden"
-                onChange={handleGalleryUpload}
-              />
             </div>
 
-            {formData.images.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {formData.images.map((img: any, index: number) => (
-                  <div key={img.publicId || index} className="space-y-2">
-                    <div className="relative group rounded-lg border overflow-hidden aspect-square bg-muted">
+            <div className="space-y-4">
+              <Label>Imagen destacada principal</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Input
+                      id="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploading}
+                      className="flex-1 cursor-pointer"
+                    />
+                    {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Esta imagen aparecerá en los listados y en la cabecera de la noticia.</p>
+                </div>
+
+                {formData.mainImageUrl && (
+                  <div className="space-y-2">
+                    <div className="relative group rounded-lg border overflow-hidden bg-muted aspect-video">
                       <img
-                        src={img.url}
-                        alt={img.caption || `Gallery ${index}`}
-                        className="w-full h-full object-cover"
+                        src={formData.mainImageUrl || "/placeholder.svg"}
+                        alt="Preview"
+                        className="h-full w-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Button
                           type="button"
                           variant="destructive"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => removeGalleryImage(img.publicId)}
+                          size="sm"
+                          onClick={() => setFormData({ ...formData, mainImageUrl: '', mainImageId: '', mainImageCaption: '' })}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 mr-2" /> Eliminar
                         </Button>
                       </div>
                     </div>
-                    <Input
-                      value={img.caption || ""}
-                      onChange={(e) => {
-                        const newImages = [...formData.images];
-                        newImages[index] = { ...newImages[index], caption: e.target.value };
-                        setFormData({ ...formData, images: newImages });
-                      }}
-                      placeholder="Pie de foto..."
-                      className="h-7 text-xs"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Type className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <Input
+                        value={formData.mainImageCaption}
+                        onChange={(e) => setFormData({ ...formData, mainImageCaption: e.target.value })}
+                        placeholder="Pie de foto: Ej. Foto: Juan Pérez / Fuente"
+                        className="h-8 text-xs"
+                      />
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
-            ) : (
-              <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground bg-muted/20">
-                <ImageIcon className="h-10 w-10 mb-2 opacity-20" />
-                <p className="text-sm">No hay imágenes en la galería</p>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category">Categoría *</Label>
-              <Popover open={openCategories} onOpenChange={setOpenCategories}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openCategories}
-                    className="w-full justify-between font-normal"
-                  >
-                    {formData.categoryId
-                      ? availableCategories.find((cat) => cat.id === formData.categoryId)?.name
-                      : "Seleccionar categoría..."}
-                    <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                  <Command>
-                    <CommandInput
-                      placeholder="Buscar o crear categoría..."
-                      value={categorySearch}
-                      onValueChange={setCategorySearch}
-                    />
-                    <CommandList>
-                      <CommandEmpty>
-                        {categorySearch.trim() !== "" ? (
-                          <div
-                            className="p-2 text-sm flex items-center gap-2 cursor-pointer hover:bg-muted text-primary font-medium"
-                            onClick={() => {
-                              handleCreateCategory(categorySearch)
-                              setOpenCategories(false)
-                            }}
-                          >
-                            <Plus className="h-4 w-4" /> Crear "{categorySearch}"
-                          </div>
-                        ) : (
-                          "No se encontraron categorías."
-                        )}
-                      </CommandEmpty>
-                      <CommandGroup className="max-h-[300px] overflow-auto">
-                        {availableCategories.map((cat) => (
-                          <CommandItem
-                            key={cat.id}
-                            value={cat.name}
-                            onSelect={() => {
-                              setFormData({ ...formData, categoryId: cat.id })
-                              setOpenCategories(false)
-                              setCategorySearch("")
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                formData.categoryId === cat.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {cat.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status">Estado *</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value })}
-                disabled={isScheduled}
-              >
-                <SelectTrigger className={cn(isScheduled && "bg-muted cursor-not-allowed opacity-70")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Borrador</SelectItem>
-                  <SelectItem value="published">Publicado</SelectItem>
-                  <SelectItem value="archived">Archivado</SelectItem>
-                </SelectContent>
-              </Select>
-              {isScheduled && (
-                <p className="text-[10px] text-orange-600 font-medium">
-                  Bloqueado en Borrador para programación.
-                </p>
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base font-bold flex items-center gap-2">
+                    <ImageIcon className="h-5 w-5 text-primary" /> Galería de Imágenes
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Añade fotos adicionales para crear una galería dentro de la nota.</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('gallery-upload')?.click()}
+                  disabled={uploading}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Añadir Fotos
+                </Button>
+                <input
+                  id="gallery-upload"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleGalleryUpload}
+                />
+              </div>
+
+              {formData.images.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {formData.images.map((img: any, index: number) => (
+                    <div key={img.publicId || index} className="space-y-2">
+                      <div className="relative group rounded-lg border overflow-hidden aspect-square bg-muted">
+                        <img
+                          src={img.url}
+                          alt={img.caption || `Gallery ${index}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => removeGalleryImage(img.publicId)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <Input
+                        value={img.caption || ""}
+                        onChange={(e) => {
+                          const newImages = [...formData.images];
+                          newImages[index] = { ...newImages[index], caption: e.target.value };
+                          setFormData({ ...formData, images: newImages });
+                        }}
+                        placeholder="Pie de foto..."
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground bg-muted/20">
+                  <ImageIcon className="h-10 w-10 mb-2 opacity-20" />
+                  <p className="text-sm">No hay imágenes en la galería</p>
+                </div>
               )}
             </div>
-          </div>
 
-          <div className="space-y-4 border-t pt-6">
-            <Label className="flex items-center gap-2">
-              <Star className="h-4 w-4" /> Etiquetas (Tags)
-            </Label>
-
-            <div className="flex flex-col gap-3">
-              <Popover open={openTags} onOpenChange={setOpenTags}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={openTags} className="w-full justify-between sm:max-w-[400px]">
-                    Añadir etiquetas...
-                    <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full sm:max-w-[400px] p-0" align="start">
-                  <Command>
-                    <CommandInput
-                      placeholder="Buscar etiqueta existente..."
-                      value={tagSearch}
-                      onValueChange={setTagSearch}
-                    />
-                    <CommandList>
-                      <CommandEmpty>
-                        {tagSearch.trim() !== "" ? (
-                          <div
-                            className="p-2 text-sm flex items-center gap-2 cursor-pointer hover:bg-muted"
-                            onClick={() => {
-                              handleCreateTag(tagSearch)
-                              setOpenTags(false)
-                            }}
-                          >
-                            <Plus className="h-4 w-4" /> Crear "{tagSearch}"
-                          </div>
-                        ) : "No se encontraron etiquetas que coincidan."}
-                      </CommandEmpty>
-                      <CommandGroup className="max-h-[200px] overflow-auto">
-                        {/* We filter matching available tags and the command input handles internal search, 
-                            but we can also just let CommandItem do its default filtering */}
-                        {availableTags.map((tag) => {
-                          const isSelected = formData.tagIds.includes(tag.id)
-                          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Categoría *</Label>
+                <Popover open={openCategories} onOpenChange={setOpenCategories}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openCategories}
+                      className="w-full justify-between font-normal"
+                    >
+                      {formData.categoryId
+                        ? availableCategories.find((cat) => cat.id === formData.categoryId)?.name
+                        : "Seleccionar categoría..."}
+                      <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar o crear categoría..."
+                        value={categorySearch}
+                        onValueChange={setCategorySearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {categorySearch.trim() !== "" ? (
+                            <div
+                              className="p-2 text-sm flex items-center gap-2 cursor-pointer hover:bg-muted text-primary font-medium"
+                              onClick={() => {
+                                handleCreateCategory(categorySearch)
+                                setOpenCategories(false)
+                              }}
+                            >
+                              <Plus className="h-4 w-4" /> Crear "{categorySearch}"
+                            </div>
+                          ) : (
+                            "No se encontraron categorías."
+                          )}
+                        </CommandEmpty>
+                        <CommandGroup className="max-h-[300px] overflow-auto">
+                          {availableCategories.map((cat) => (
                             <CommandItem
-                              key={tag.id}
-                              value={tag.name}
+                              key={cat.id}
+                              value={cat.name}
                               onSelect={() => {
-                                handleToggleTag(tag.id)
-                                setTagSearch("")
+                                setFormData({ ...formData, categoryId: cat.id })
+                                setOpenCategories(false)
+                                setCategorySearch("")
                               }}
                             >
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  isSelected ? "opacity-100" : "opacity-0"
+                                  formData.categoryId === cat.id ? "opacity-100" : "opacity-0"
                                 )}
                               />
-                              {tag.name}
+                              {cat.name}
                             </CommandItem>
-                          )
-                        })}
-                        {tagSearch.trim() !== "" && !availableTags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) && (
-                          <CommandItem
-                            value={`Crear ${tagSearch}`}
-                            onSelect={() => {
-                              handleCreateTag(tagSearch)
-                              setOpenTags(false)
-                            }}
-                            className="text-primary font-medium border-t rounded-none"
-                          >
-                            <Plus className="mr-2 h-4 w-4" /> Crear "{tagSearch}"
-                          </CommandItem>
-                        )}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-              <div className="flex flex-wrap gap-2">
-                {formData.tagIds.map((tagId: string) => {
-                  const tag = availableTags.find(t => t.id === tagId)
-                  if (!tag) return null
-                  return (
-                    <Badge
-                      key={tag.id}
-                      variant="default"
-                      className="px-3 py-1 bg-primary/20 text-primary hover:bg-primary/30 border-primary/20 flex items-center gap-1 shadow-sm"
-                    >
-                      {tag.name}
-                      <X
-                        className="h-3.5 w-3.5 ml-1 cursor-pointer hover:text-red-500 transition-colors opacity-70 hover:opacity-100"
-                        onClick={() => handleToggleTag(tag.id)}
+              <div className="space-y-2">
+                <Label htmlFor="status">Estado *</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  disabled={isScheduled}
+                >
+                  <SelectTrigger className={cn(isScheduled && "bg-muted cursor-not-allowed opacity-70")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Borrador</SelectItem>
+                    <SelectItem value="published">Publicado</SelectItem>
+                    <SelectItem value="archived">Archivado</SelectItem>
+                  </SelectContent>
+                </Select>
+                {isScheduled && (
+                  <p className="text-[10px] text-orange-600 font-medium">
+                    Bloqueado en Borrador para programación.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4 border-t pt-6">
+              <Label className="flex items-center gap-2">
+                <Star className="h-4 w-4" /> Etiquetas (Tags)
+              </Label>
+
+              <div className="flex flex-col gap-3">
+                <Popover open={openTags} onOpenChange={setOpenTags}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={openTags} className="w-full justify-between sm:max-w-[400px]">
+                      Añadir etiquetas...
+                      <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full sm:max-w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar etiqueta existente..."
+                        value={tagSearch}
+                        onValueChange={setTagSearch}
                       />
-                    </Badge>
-                  )
-                })}
+                      <CommandList>
+                        <CommandEmpty>
+                          {tagSearch.trim() !== "" ? (
+                            <div
+                              className="p-2 text-sm flex items-center gap-2 cursor-pointer hover:bg-muted"
+                              onClick={() => {
+                                handleCreateTag(tagSearch)
+                                setOpenTags(false)
+                              }}
+                            >
+                              <Plus className="h-4 w-4" /> Crear "{tagSearch}"
+                            </div>
+                          ) : "No se encontraron etiquetas que coincidan."}
+                        </CommandEmpty>
+                        <CommandGroup className="max-h-[200px] overflow-auto">
+                          {/* We filter matching available tags and the command input handles internal search, 
+                            but we can also just let CommandItem do its default filtering */}
+                          {availableTags.map((tag) => {
+                            const isSelected = formData.tagIds.includes(tag.id)
+                            return (
+                              <CommandItem
+                                key={tag.id}
+                                value={tag.name}
+                                onSelect={() => {
+                                  handleToggleTag(tag.id)
+                                  setTagSearch("")
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    isSelected ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {tag.name}
+                              </CommandItem>
+                            )
+                          })}
+                          {tagSearch.trim() !== "" && !availableTags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) && (
+                            <CommandItem
+                              value={`Crear ${tagSearch}`}
+                              onSelect={() => {
+                                handleCreateTag(tagSearch)
+                                setOpenTags(false)
+                              }}
+                              className="text-primary font-medium border-t rounded-none"
+                            >
+                              <Plus className="mr-2 h-4 w-4" /> Crear "{tagSearch}"
+                            </CommandItem>
+                          )}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                <div className="flex flex-wrap gap-2">
+                  {formData.tagIds.map((tagId: string) => {
+                    const tag = availableTags.find(t => t.id === tagId)
+                    if (!tag) return null
+                    return (
+                      <Badge
+                        key={tag.id}
+                        variant="default"
+                        className="px-3 py-1 bg-primary/20 text-primary hover:bg-primary/30 border-primary/20 flex items-center gap-1 shadow-sm"
+                      >
+                        {tag.name}
+                        <X
+                          className="h-3.5 w-3.5 ml-1 cursor-pointer hover:text-red-500 transition-colors opacity-70 hover:opacity-100"
+                          onClick={() => handleToggleTag(tag.id)}
+                        />
+                      </Badge>
+                    )
+                  })}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2 bg-primary/5 p-4 rounded-lg border border-primary/20">
-              <Switch
-                id="featured"
-                checked={formData.featured}
-                onCheckedChange={(checked) => setFormData({ ...formData, featured: checked })}
-              />
-              <div className="space-y-0.5">
-                <Label htmlFor="featured" className="flex items-center gap-2 cursor-pointer">
-                  <Star className={cn("h-4 w-4", formData.featured ? "fill-primary text-primary" : "text-muted-foreground")} />
-                  Noticia Destacada (Hero)
-                </Label>
-                <p className="text-xs text-muted-foreground line-clamp-1">
-                  Aparecerá en el encabezado principal de la Home.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-4 p-4 rounded-lg bg-orange-50/50 border border-orange-200">
-              <div className="flex items-center space-x-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2 bg-primary/5 p-4 rounded-lg border border-primary/20">
                 <Switch
-                  id="isScheduled"
-                  checked={isScheduled}
-                  onCheckedChange={(checked) => {
-                    setIsScheduled(checked)
-                    if (checked) {
-                      setFormData({ ...formData, status: "draft" })
-                    }
-                  }}
+                  id="featured"
+                  checked={formData.featured}
+                  onCheckedChange={(checked) => setFormData({ ...formData, featured: checked })}
                 />
                 <div className="space-y-0.5">
-                  <Label htmlFor="isScheduled" className="flex items-center gap-2 cursor-pointer font-bold text-orange-700">
-                    <Clock className="h-4 w-4" />
-                    Programar Noticia
+                  <Label htmlFor="featured" className="flex items-center gap-2 cursor-pointer">
+                    <Star className={cn("h-4 w-4", formData.featured ? "fill-primary text-primary" : "text-muted-foreground")} />
+                    Noticia Destacada (Hero)
                   </Label>
-                  <p className="text-xs text-orange-600 line-clamp-1">
-                    Publicación automática en fecha/hora.
+                  <p className="text-xs text-muted-foreground line-clamp-1">
+                    Aparecerá en el encabezado principal de la Home.
                   </p>
                 </div>
               </div>
 
-              {isScheduled && (
-                <div className="animate-in slide-in-from-top-2 duration-300">
-                  <Input
-                    type="datetime-local"
-                    value={formData.scheduledAt ? formData.scheduledAt.substring(0, 16) : ""}
-                    onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })}
-                    className="bg-white border-orange-200 focus:ring-orange-500 h-8 text-xs"
-                    min={new Date().toISOString().substring(0, 16)}
+              <div className="flex flex-col gap-4 p-4 rounded-lg bg-orange-50/50 border border-orange-200">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="isScheduled"
+                    checked={isScheduled}
+                    onCheckedChange={(checked) => {
+                      setIsScheduled(checked)
+                      if (checked) {
+                        setFormData({ ...formData, status: "draft" })
+                      }
+                    }}
                   />
+                  <div className="space-y-0.5">
+                    <Label htmlFor="isScheduled" className="flex items-center gap-2 cursor-pointer font-bold text-orange-700">
+                      <Clock className="h-4 w-4" />
+                      Programar Noticia
+                    </Label>
+                    <p className="text-xs text-orange-600 line-clamp-1">
+                      Publicación automática en fecha/hora.
+                    </p>
+                  </div>
                 </div>
-              )}
+
+                {isScheduled && (
+                  <div className="animate-in slide-in-from-top-2 duration-300">
+                    <Input
+                      type="datetime-local"
+                      value={formData.scheduledAt ? formData.scheduledAt.substring(0, 16) : ""}
+                      onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })}
+                      className="bg-white border-orange-200 focus:ring-orange-500 h-8 text-xs"
+                      min={new Date().toISOString().substring(0, 16)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-4 border-t">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <Button type="submit" disabled={loading || uploading} className={cn("w-full sm:w-auto", isScheduled && "bg-orange-600 hover:bg-orange-700")}>
-                {loading ? "Guardando..." :
-                  isScheduled ? "Programar Noticia" :
-                    initialData ? "Actualizar Noticia" : "Crear Noticia"}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading} className="w-full sm:w-auto">
-                Cancelar
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-4 border-t">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <Button type="submit" disabled={loading || uploading} className={cn("w-full sm:w-auto", isScheduled && "bg-orange-600 hover:bg-orange-700")}>
+                  {loading ? "Guardando..." :
+                    isScheduled ? "Programar Noticia" :
+                      initialData ? "Actualizar Noticia" : "Crear Noticia"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading} className="w-full sm:w-auto">
+                  Cancelar
+                </Button>
+              </div>
+
+              <Button type="button" variant="secondary" onClick={() => setShowPreview(true)} className="flex items-center justify-center gap-2 w-full md:w-auto">
+                <Eye className="h-4 w-4" /> Vista Previa
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      </form>
 
-            <Button type="button" variant="secondary" onClick={() => setShowPreview(true)} className="flex items-center justify-center gap-2 w-full md:w-auto">
-              <Eye className="h-4 w-4" /> Vista Previa
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Modal de Previsualización */}
       {showPreview && (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-in fade-in duration-300">
           <header className="h-16 border-b flex items-center justify-between px-6 bg-card shrink-0">
@@ -802,8 +857,8 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
               <Badge variant="outline" className="uppercase tracking-widest text-[10px]">Previsualización</Badge>
               <h2 className="font-bold truncate max-w-[400px]">{formData.title || 'Sin título'}</h2>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
-              Cerrar Previsualización
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
+              Cerrar y Volver al Editor
             </Button>
           </header>
 
@@ -852,6 +907,6 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
           </div>
         </div>
       )}
-    </form>
+    </>
   )
 }
