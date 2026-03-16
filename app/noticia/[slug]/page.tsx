@@ -83,7 +83,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
   try {
     const response = await fetchApi(`/news/${slug}`, {
-      next: { tags: [`news-${slug}`], revalidate: 3600 }
+      next: { tags: [`news-${slug}`], revalidate: 0 }
     });
     article = response.data;
 
@@ -127,6 +127,32 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     });
   };
 
+  /**
+   * Normaliza el contenido del artículo para asegurar que siempre se muestre
+   * con párrafos correctos, independientemente de cómo fue ingresado.
+   * - Si ya tiene etiquetas HTML (ej: <p>, <br>, <h2>), lo devuelve tal cual.
+   * - Si es texto plano con saltos de línea, convierte cada bloque en un <p>.
+   */
+  const normalizeContent = (content: string): string => {
+    if (!content) return ""
+
+    // Si el contenido ya tiene etiquetas HTML de bloque, renderizarlo directamente
+    const hasBlockHtml = /<(p|br|h[1-6]|ul|ol|li|blockquote|div|table)\b/i.test(content)
+    if (hasBlockHtml) return content
+
+    // Si es texto plano, convertir saltos de línea en párrafos <p>
+    return content
+      .split(/\n\n+/) // Separar por doble salto de línea (párrafos)
+      .map((block) =>
+        block
+          .split(/\n/) // Saltos de línea simples → <br> dentro del párrafo
+          .join("<br>")
+      )
+      .filter((block) => block.trim().length > 0)
+      .map((block) => `<p>${block}</p>`)
+      .join("")
+  }
+
   const jsonLd = generateArticleJSONLD({
     title: article.seoTitle || article.title,
     description: article.seoDescription || article.excerpt,
@@ -165,7 +191,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 relative">
           {/* Contenido principal */}
-          <article className="lg:col-span-8 w-full min-w-0 overflow-hidden" lang="es">
+          <article className="lg:col-span-8 w-full min-w-0 overflow-x-hidden" lang="es">
             {/* Header del artículo */}
             <div className="mb-8">
               {article.category && (
@@ -229,8 +255,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
             {/* Contenido del artículo Premium Typography */}
             <div
-              className="prose prose-lg md:prose-xl max-w-none dark:prose-invert prose-slate prose-headings:font-serif prose-headings:font-bold prose-p:leading-relaxed prose-p:text-pretty prose-img:rounded-lg"
-              dangerouslySetInnerHTML={{ __html: article.content }}
+              className="prose prose-lg md:prose-xl max-w-none dark:prose-invert prose-slate prose-headings:font-serif prose-headings:font-bold prose-p:leading-relaxed prose-p:text-pretty prose-img:rounded-lg article-content"
+              dangerouslySetInnerHTML={{ __html: normalizeContent(article.content) }}
             />
 
             {/* Ad in content */}
@@ -239,12 +265,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             </div>
 
             {/* Galería de Imágenes Premium */}
-            {article.images && article.images.length > 0 && (
+            {article.images && article?.images?.length > 0 && (
               <div className="mt-16 pt-12 border-t border-border/50">
                 <div className="flex items-center gap-3 mb-8">
                   <div className="h-8 w-1 bg-primary rounded-full" />
                   <h3 className="font-serif text-3xl font-bold flex items-center gap-2">
-                    <ImageIcon className="h-6 w-6 text-primary" /> Galería de Imágenes
+                    <ImageIcon className="h-6 w-6 text-primary" /> Galería de Imágenes (v2)
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
