@@ -439,6 +439,7 @@
   hyphens: none;
   -webkit-hyphens: none;
   word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .prose * {

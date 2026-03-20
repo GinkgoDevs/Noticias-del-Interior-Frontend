@@ -136,12 +136,20 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const normalizeContent = (content: string): string => {
     if (!content) return ""
 
+    // REPARACIÓN CRÍTICA: Los textos pegados desde PDF a veces traen "espacios no divisibles" (&nbsp; o \u00A0).
+    // Esto engaña al navegador haciéndole creer que todo el párrafo es UNA SOLA palabra gigante.
+    // Reemplazamos estos espacios invisibles problemáticos por espacios estándar.
+    let cleanContent = content
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\u00A0/g, ' ')
+      .replace(/\u200B/g, ''); // Quitar zero-width spaces por las dudas
+
     // Si el contenido ya tiene etiquetas HTML de bloque, renderizarlo directamente
-    const hasBlockHtml = /<(p|br|h[1-6]|ul|ol|li|blockquote|div|table)\b/i.test(content)
-    if (hasBlockHtml) return content
+    const hasBlockHtml = /<(p|br|h[1-6]|ul|ol|li|blockquote|div|table)\b/i.test(cleanContent)
+    if (hasBlockHtml) return cleanContent
 
     // Si es texto plano, convertir saltos de línea en párrafos <p>
-    return content
+    return cleanContent
       .split(/\n\n+/) // Separar por doble salto de línea (párrafos)
       .map((block) =>
         block
@@ -255,7 +263,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
             {/* Contenido del artículo Premium Typography */}
             <div
-              className="prose prose-lg md:prose-xl max-w-none dark:prose-invert prose-slate prose-headings:font-serif prose-headings:font-bold prose-p:leading-relaxed prose-p:text-pretty prose-img:rounded-lg article-content"
+              className="prose prose-lg md:prose-xl max-w-none dark:prose-invert prose-slate prose-headings:font-serif prose-headings:font-bold prose-p:leading-relaxed prose-img:rounded-lg article-content"
               dangerouslySetInnerHTML={{ __html: normalizeContent(article.content) }}
             />
 
