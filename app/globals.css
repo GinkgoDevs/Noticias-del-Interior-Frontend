@@ -428,8 +428,8 @@
   /* NO usar hyphens: auto — parte las palabras a mitad en español */
   hyphens: none;
   -webkit-hyphens: none;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .prose p {
@@ -438,13 +438,12 @@
   /* Sin guionización automática en párrafos */
   hyphens: none;
   -webkit-hyphens: none;
-  word-break: keep-all;
+  word-break: normal;
 }
 
 .prose * {
   max-width: 100% !important;
-  /* overflow-wrap: anywhere en lugar de break-word para no romper palabras agresivamente */
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .prose img,
