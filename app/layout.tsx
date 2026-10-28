@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Outfit, Playfair_Display, Work_Sans } from "next/font/google"
+import { Outfit, Playfair_Display, Work_Sans, Manrope, Source_Serif_4 } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import "react-quill-new/dist/quill.snow.css"
@@ -19,11 +19,24 @@ const playfair = Playfair_Display({
   display: "swap",
 })
 
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+})
+
 const workSans = Work_Sans({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
   weight: ["300", "400", "500", "600", "700"],
+})
+
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  variable: "--font-article",
+  display: "swap",
 })
 
 export const metadata: Metadata = {
@@ -90,7 +103,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`${outfit.variable} ${playfair.variable} ${workSans.variable}`} suppressHydrationWarning>
+    <html lang="es" className={`${outfit.variable} ${playfair.variable} ${workSans.variable} ${manrope.variable} ${sourceSerif.variable}`} suppressHydrationWarning>
       <head>
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />

@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { fetchApi, API_URL } from "@/lib/api-client"
+import { fetchApi, API_URL, uploadFile } from "@/lib/api-client"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,10 +24,20 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, X } from "lucide-react"
 import { toast } from "sonner"
-const ReactQuill = dynamic(() => import("react-quill-new"), {
-  ssr: false,
-  loading: () => <div className="h-[300px] w-full bg-muted animate-pulse rounded-md" />,
-})
+import { isVideoUrl, validateGalleryFile, validateVideoFile } from "@/lib/media"
+
+const ReactQuill = dynamic(
+  async () => {
+    const rq = await import("react-quill-new")
+    const { registerVideoFileBlot } = await import("@/lib/quill-video")
+    registerVideoFileBlot(rq.Quill)
+    return rq.default
+  },
+  {
+    ssr: false,
+    loading: () => <div className="h-[300px] w-full bg-muted animate-pulse rounded-md" />,
+  },
+)
 
 interface NewsFormProps {
   categories: any[]
@@ -59,12 +69,61 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
   })
   const [isScheduled, setIsScheduled] = useState(!!initialData?.scheduledAt)
   const [showPreview, setShowPreview] = useState(false)
-  const [availableTags, setAvailableTags] = useState<any[]>(tags || [])
+  const [availableTags, setAvailableTags] = useState<any[]>(tags?.filter(t => t.active) || [])
   const [tagSearch, setTagSearch] = useState("")
   const [openTags, setOpenTags] = useState(false)
   const [availableCategories, setAvailableCategories] = useState<any[]>(categories || [])
   const [categorySearch, setCategorySearch] = useState("")
   const [openCategories, setOpenCategories] = useState(false)
+
+  const quillModules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ header: [1, 2, 3, false] }],
+        ["bold", "italic", "underline", "strike"],
+        [{ list: "ordered" }, { list: "bullet" }],
+        ["link", "image", "video"],
+        ["clean"],
+      ],
+      handlers: {
+        video(this: { quill: any }) {
+          const quill = this.quill
+          const input = document.createElement("input")
+          input.setAttribute("type", "file")
+          input.setAttribute("accept", "video/mp4,video/webm,video/quicktime,video/ogg,.mp4,.webm,.mov,.ogg")
+          input.style.display = "none"
+          document.body.appendChild(input)
+          input.addEventListener("cancel", () => input.remove())
+          input.click()
+          input.onchange = async () => {
+            const file = input.files?.[0]
+            input.remove()
+            if (!file) return
+
+            const validationError = validateVideoFile(file)
+            if (validationError) {
+              toast.error(validationError, { position: "top-center" })
+              return
+            }
+
+            setUploading(true)
+            try {
+              const uploaded = await uploadFile(file)
+              const range = quill.getSelection(true)
+              const index = range?.index ?? Math.max(quill.getLength() - 1, 0)
+              quill.insertEmbed(index, "videoFile", uploaded.url, "user")
+              quill.setSelection(index + 1)
+              toast.success("Video insertado en el texto", { position: "top-center" })
+            } catch (err: any) {
+              toast.error(err?.message || "No se pudo subir el video", { position: "top-center" })
+            } finally {
+              setUploading(false)
+            }
+          }
+        },
+      },
+    },
+  }), [])
 
   // 1. Cargar borrador desde localStorage al montar (solo para nueva noticia)
   useEffect(() => {
@@ -242,19 +301,18 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
     if (!files || files.length === 0) return;
 
     setUploading(true);
+    const uploadedImages: any[] = [];
     try {
-      const uploadedImages: any[] = [];
       for (let i = 0; i < files.length; i++) {
-        const formDataUpload = new FormData();
-        formDataUpload.append('file', files[i]);
+        const file = files[i]
+        const validationError = validateGalleryFile(file)
+        if (validationError) throw new Error(validationError)
 
-        const res = await uploadImageAction(formDataUpload);
-
-        if (!res.success) throw new Error(res.message || 'Error al subir una de las imágenes');
+        const uploaded = await uploadFile(file)
 
         uploadedImages.push({
-          url: res.data.url,
-          publicId: res.data.publicId,
+          url: uploaded.url,
+          publicId: uploaded.publicId,
           position: formData.images.length + i
         });
       }
@@ -264,10 +322,17 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
         images: [...prev.images, ...uploadedImages]
       }));
     } catch (err: any) {
-      const errorMsg = "Error al subir imágenes a la galería: " + (err.message || "")
+      if (uploadedImages.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          images: [...prev.images, ...uploadedImages]
+        }));
+      }
+      const errorMsg = err?.message || "No se pudo subir el archivo a la galería"
       setError(errorMsg)
       toast.error(errorMsg, { position: "top-center" })
     } finally {
+      e.target.value = ""
       setUploading(false);
     }
   }
@@ -288,7 +353,8 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
     }
 
     const strippedContent = formData.content.replace(/<[^>]*>?/gm, '').trim()
-    if (!strippedContent) {
+    const hasMedia = /<(img|video|iframe)\b/i.test(formData.content)
+    if (!strippedContent && !hasMedia) {
       toast.error("El contenido de la noticia es obligatorio.", { position: "top-center", duration: 3000 })
       return
     }
@@ -409,19 +475,11 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
                   theme="snow"
                   value={formData.content}
                   onChange={(content) => setFormData({ ...formData, content })}
-                  modules={{
-                    toolbar: [
-                      [{ header: [1, 2, 3, false] }],
-                      ["bold", "italic", "underline", "strike"],
-                      [{ list: "ordered" }, { list: "bullet" }],
-                      ["link", "image"],
-                      ["clean"],
-                    ],
-                  }}
+                  modules={quillModules}
                   className="h-[350px]"
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Usa el editor para dar formato a tu noticia.</p>
+              <p className="text-xs text-muted-foreground mt-2">Usa el editor para dar formato a tu noticia. El botón de video sube un archivo MP4, WebM, MOV u OGG de hasta 80 MB.</p>
             </div>
 
             <Separator className="my-8" />
@@ -482,14 +540,27 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
                 </div>
 
                 {formData.mainImageUrl && (
-                  <div className="space-y-2">
-                    <div className="relative group rounded-lg border overflow-hidden bg-muted aspect-video">
+                  <div className="space-y-3">
+                    <div 
+                      className="relative group rounded-lg border overflow-hidden bg-muted flex items-center justify-center w-full"
+                      style={{ 
+                        aspectRatio: formData.mainImageCaption?.includes("[fit:contain]") ? 'auto' : 
+                                     (formData.mainImageCaption?.match(/\[ratio:([\d/]+)\]/)?.[1] || '16/9'),
+                        maxHeight: '400px'
+                      }}
+                    >
                       <img
                         src={formData.mainImageUrl || "/placeholder.svg"}
                         alt="Preview"
-                        className="h-full w-full object-cover"
+                        className={cn(
+                          "w-full h-full transition-all duration-300",
+                          formData.mainImageCaption?.includes("[fit:contain]") ? "object-contain" : "object-cover"
+                        )}
+                        style={{
+                          objectPosition: formData.mainImageCaption?.match(/\[pos:(top|center|bottom)\]/)?.[1] || 'center'
+                        }}
                       />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <Button
                           type="button"
                           variant="destructive"
@@ -500,14 +571,118 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
                         </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Type className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <Input
-                        value={formData.mainImageCaption}
-                        onChange={(e) => setFormData({ ...formData, mainImageCaption: e.target.value })}
-                        placeholder="Pie de foto: Ej. Foto: Juan Pérez / Fuente"
-                        className="h-8 text-xs"
-                      />
+                    
+                    <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
+                       {/* Ajuste de Ajuste/Recorte */}
+                       <div className="flex flex-wrap items-center gap-4">
+                         <div className="space-y-1.5">
+                           <span className="text-[10px] uppercase font-black text-primary tracking-widest block">Modo de ajuste:</span>
+                           <div className="flex bg-muted p-1 rounded-md border border-border/50">
+                             <button
+                               type="button"
+                               className={cn(
+                                 "px-3 py-1 text-[10px] rounded-sm transition-all font-bold",
+                                 !formData.mainImageCaption?.includes("[fit:contain]") 
+                                 ? "bg-white shadow-sm text-primary" 
+                                 : "text-muted-foreground hover:text-foreground"
+                               )}
+                               onClick={() => {
+                                 let newCaption = formData.mainImageCaption.replace(/\[fit:contain\]/g, "").trim();
+                                 setFormData({ ...formData, mainImageCaption: newCaption });
+                               }}
+                             >
+                               Recortar (Llenar)
+                             </button>
+                             <button
+                               type="button"
+                               className={cn(
+                                 "px-3 py-1 text-[10px] rounded-sm transition-all font-bold",
+                                 formData.mainImageCaption?.includes("[fit:contain]") 
+                                 ? "bg-white shadow-sm text-primary" 
+                                 : "text-muted-foreground hover:text-foreground"
+                               )}
+                               onClick={() => {
+                                 if (!formData.mainImageCaption?.includes("[fit:contain]")) {
+                                   setFormData({ ...formData, mainImageCaption: `[fit:contain] ${formData.mainImageCaption || ""}`.trim() });
+                                 }
+                               }}
+                             >
+                               Ajustar (Completa)
+                             </button>
+                           </div>
+                         </div>
+
+                         {!formData.mainImageCaption?.includes("[fit:contain]") && (
+                           <>
+                             <div className="space-y-1.5">
+                               <span className="text-[10px] uppercase font-black text-primary tracking-widest block">Encuadre (Vertical):</span>
+                               <div className="flex bg-muted p-1 rounded-md border border-border/50">
+                                 {['top', 'center', 'bottom'].map((pos) => (
+                                   <button
+                                     key={pos}
+                                     type="button"
+                                     className={cn(
+                                       "px-2 py-1 text-[10px] rounded-sm transition-all font-bold capitalize",
+                                       (formData.mainImageCaption?.match(/\[pos:(top|center|bottom)\]/)?.[1] || 'center') === pos
+                                       ? "bg-white shadow-sm text-primary" 
+                                       : "text-muted-foreground hover:text-foreground"
+                                     )}
+                                     onClick={() => {
+                                       let newCaption = formData.mainImageCaption.replace(/\[pos:(top|center|bottom)\]/g, "").trim();
+                                       newCaption = `[pos:${pos}] ${newCaption}`.trim();
+                                       setFormData({ ...formData, mainImageCaption: newCaption });
+                                     }}
+                                   >
+                                     {pos === 'top' ? 'Arriba' : pos === 'center' ? 'Centro' : 'Abajo'}
+                                   </button>
+                                 ))}
+                               </div>
+                             </div>
+
+                             <div className="space-y-1.5">
+                               <span className="text-[10px] uppercase font-black text-primary tracking-widest block">Formato:</span>
+                               <div className="flex bg-muted p-1 rounded-md border border-border/50">
+                                 {['16/9', '4/3', '1/1'].map((ratio) => (
+                                   <button
+                                     key={ratio}
+                                     type="button"
+                                     className={cn(
+                                       "px-2 py-1 text-[10px] rounded-sm transition-all font-bold",
+                                       (formData.mainImageCaption?.match(/\[ratio:([\d/]+)\]/)?.[1] || '16/9') === ratio
+                                       ? "bg-white shadow-sm text-primary" 
+                                       : "text-muted-foreground hover:text-foreground"
+                                     )}
+                                     onClick={() => {
+                                       let newCaption = formData.mainImageCaption.replace(/\[ratio:([\d/]+)\]/g, "").trim();
+                                       newCaption = `[ratio:${ratio}] ${newCaption}`.trim();
+                                       setFormData({ ...formData, mainImageCaption: newCaption });
+                                     }}
+                                   >
+                                     {ratio}
+                                   </button>
+                                 ))}
+                               </div>
+                             </div>
+                           </>
+                         )}
+                       </div>
+
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/30">
+                        <Type className="h-4 w-4 text-primary shrink-0" />
+                        <Input
+                          value={formData.mainImageCaption?.replace(/\[(fit|pos|ratio):[^\]]+\]/g, "").trim() || ""}
+                          onChange={(e) => {
+                            const tags = formData.mainImageCaption?.match(/\[(fit|pos|ratio):[^\]]+\]/g) || [];
+                            const newText = e.target.value;
+                            setFormData({ 
+                              ...formData, 
+                              mainImageCaption: `${tags.join(" ")} ${newText}`.trim() 
+                            });
+                          }}
+                          placeholder="Pie de foto: Ej. Foto: Juan Pérez / Fuente"
+                          className="h-8 text-xs font-medium border-0 bg-transparent focus-visible:ring-0 px-0"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -520,9 +695,9 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-base font-bold flex items-center gap-2">
-                    <ImageIcon className="h-5 w-5 text-primary" /> Galería de Imágenes
+                    <ImageIcon className="h-5 w-5 text-primary" /> Galería
                   </Label>
-                  <p className="text-xs text-muted-foreground">Añade fotos adicionales para crear una galería dentro de la nota.</p>
+                  <p className="text-xs text-muted-foreground">Fotos o videos (MP4, WebM, MOV u OGG, hasta 80 MB). Las fotos verticales se ven mejor con "Ajustar".</p>
                 </div>
                 <Button
                   type="button"
@@ -531,57 +706,150 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
                   onClick={() => document.getElementById('gallery-upload')?.click()}
                   disabled={uploading}
                 >
-                  <Plus className="h-4 w-4 mr-2" /> Añadir Fotos
+                  {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                  {uploading ? "Subiendo..." : "Añadir fotos o videos"}
                 </Button>
                 <input
                   id="gallery-upload"
                   type="file"
                   multiple
-                  accept="image/*"
+                  accept="image/*,video/mp4,video/webm,video/quicktime,video/ogg,.mp4,.webm,.mov,.ogg"
                   className="hidden"
                   onChange={handleGalleryUpload}
                 />
               </div>
 
               {formData.images.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {formData.images.map((img: any, index: number) => (
-                    <div key={img.publicId || index} className="space-y-2">
-                      <div className="relative group rounded-lg border overflow-hidden aspect-square bg-muted">
-                        <img
-                          src={img.url}
-                          alt={img.caption || `Gallery ${index}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {formData.images.map((img: any, index: number) => {
+                    const video = isVideoUrl(img.url);
+                    const isContain = img.caption?.includes("[fit:contain]");
+                    const pos = img.caption?.match(/\[pos:(top|center|bottom)\]/)?.[1] || 'center';
+                    const ratio = img.caption?.match(/\[ratio:([\d/]+)\]/)?.[1] || '16/9';
+                    const cleanCaption = img.caption?.replace(/\[(fit|pos|ratio):[^\]]+\]/g, "").trim() || "";
+
+                    return (
+                      <div key={img.publicId || index} className="space-y-2 group/item">
+                        <div 
+                          className="relative group rounded-lg border overflow-hidden bg-muted/50 flex items-center justify-center w-full"
+                          style={{ 
+                            aspectRatio: video ? '16/9' : (isContain ? 'auto' : ratio),
+                            height: !video && isContain ? '150px' : 'auto'
+                          }}
+                        >
+                          {video ? (
+                            <video
+                              src={img.url}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              className="h-full w-full bg-black object-contain"
+                            />
+                          ) : (
+                            <img
+                              src={img.url}
+                              alt={img.caption || `Gallery ${index}`}
+                              className={cn(
+                                "w-full h-full transition-all duration-300",
+                                isContain ? "object-contain p-2" : "object-cover group-hover/item:scale-105"
+                              )}
+                              style={{
+                                objectPosition: isContain ? 'center' : pos
+                              }}
+                            />
+                          )}
                           <Button
                             type="button"
                             variant="destructive"
                             size="icon"
-                            className="h-8 w-8"
+                            className={cn(
+                              "absolute top-2 right-2 h-8 w-8",
+                              !video && "opacity-0 group-hover:opacity-100"
+                            )}
                             onClick={() => removeGalleryImage(img.publicId)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+                          
+                          {/* Selector de modo rápido flotante */}
+                          {!video && <div className="absolute top-2 left-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-1 bg-black/50 p-1 rounded backdrop-blur-sm">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newImages = [...formData.images];
+                                  let newCap = img.caption?.replace(/\[fit:contain\]/g, "").trim() || "";
+                                  newImages[index] = { ...newImages[index], caption: newCap };
+                                  setFormData({ ...formData, images: newImages });
+                                }}
+                                className={cn("px-1.5 py-0.5 text-[8px] rounded uppercase font-bold", !isContain ? "bg-white text-black" : "text-white/70")}
+                              >
+                                Corte
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newImages = [...formData.images];
+                                  let newCap = img.caption?.replace(/\[fit:contain\]/g, "").trim() || "";
+                                  newImages[index] = { ...newImages[index], caption: `[fit:contain] ${newCap}`.trim() };
+                                  setFormData({ ...formData, images: newImages });
+                                }}
+                                className={cn("px-1.5 py-0.5 text-[8px] rounded uppercase font-bold", isContain ? "bg-white text-black" : "text-white/70")}
+                              >
+                                Ajuste
+                              </button>
+                            </div>
+
+                            {!isContain && (
+                              <div className="flex gap-1 bg-black/50 p-1 rounded backdrop-blur-sm">
+                                {['top', 'center', 'bottom'].map(p => (
+                                  <button
+                                    key={p}
+                                    type="button"
+                                    onClick={() => {
+                                      const newImages = [...formData.images];
+                                      let newCap = img.caption?.replace(/\[pos:(top|center|bottom)\]/g, "").trim() || "";
+                                      newCap = `[pos:${p}] ${newCap}`.trim();
+                                      newImages[index] = { ...newImages[index], caption: newCap };
+                                      setFormData({ ...formData, images: newImages });
+                                    }}
+                                    className={cn("px-1 py-0.5 text-[8px] rounded uppercase font-bold", pos === p ? "bg-primary text-white" : "text-white/70")}
+                                  >
+                                    {p === 'top' ? 'Arr' : p === 'center' ? 'Cen' : 'Abj'}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 px-1">
+                            <Type className="h-3 w-3 text-primary opacity-50 shrink-0" />
+                            <Input
+                              value={cleanCaption}
+                              onChange={(e) => {
+                                const newImages = [...formData.images];
+                                const tags = img.caption?.match(/\[(fit|pos|ratio):[^\]]+\]/g) || [];
+                                const newText = e.target.value;
+                                newImages[index] = { 
+                                  ...newImages[index], 
+                                  caption: `${tags.join(" ")} ${newText}`.trim() 
+                                };
+                                setFormData({ ...formData, images: newImages });
+                              }}
+                              placeholder={video ? "Descripción del video..." : "Pie de foto..."}
+                              className="h-7 text-[10px] border-0 bg-transparent focus-visible:ring-0 px-0"
+                            />
+                          </div>
                         </div>
                       </div>
-                      <Input
-                        value={img.caption || ""}
-                        onChange={(e) => {
-                          const newImages = [...formData.images];
-                          newImages[index] = { ...newImages[index], caption: e.target.value };
-                          setFormData({ ...formData, images: newImages });
-                        }}
-                        placeholder="Pie de foto..."
-                        className="h-7 text-xs"
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground bg-muted/20">
                   <ImageIcon className="h-10 w-10 mb-2 opacity-20" />
-                  <p className="text-sm">No hay imágenes en la galería</p>
+                  <p className="text-sm">No hay fotos ni videos en la galería</p>
                 </div>
               )}
             </div>
@@ -691,17 +959,33 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-full sm:max-w-[400px] p-0" align="start">
-                    <Command>
+                    <Command filter={(value, search) => {
+                      if (value.toLowerCase().includes(search.toLowerCase())) return 1
+                      return 0
+                    }}>
                       <CommandInput
-                        placeholder="Buscar etiqueta existente..."
+                        placeholder="Buscar o crear etiqueta..."
                         value={tagSearch}
                         onValueChange={setTagSearch}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && tagSearch.trim() !== "") {
+                            e.preventDefault();
+                            const exists = availableTags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase());
+                            if (exists) {
+                              handleToggleTag(exists.id);
+                              setTagSearch("");
+                            } else {
+                              handleCreateTag(tagSearch);
+                              setOpenTags(false);
+                            }
+                          }
+                        }}
                       />
                       <CommandList>
                         <CommandEmpty>
                           {tagSearch.trim() !== "" ? (
                             <div
-                              className="p-2 text-sm flex items-center gap-2 cursor-pointer hover:bg-muted"
+                              className="p-2 text-sm flex items-center gap-2 cursor-pointer hover:bg-muted text-primary font-medium"
                               onClick={() => {
                                 handleCreateTag(tagSearch)
                                 setOpenTags(false)
@@ -709,11 +993,9 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
                             >
                               <Plus className="h-4 w-4" /> Crear "{tagSearch}"
                             </div>
-                          ) : "No se encontraron etiquetas que coincidan."}
+                          ) : "Escribe para buscar o crear."}
                         </CommandEmpty>
-                        <CommandGroup className="max-h-[200px] overflow-auto">
-                          {/* We filter matching available tags and the command input handles internal search, 
-                            but we can also just let CommandItem do its default filtering */}
+                        <CommandGroup heading="Existentes" className="max-h-[200px] overflow-auto">
                           {availableTags.map((tag) => {
                             const isSelected = formData.tagIds.includes(tag.id)
                             return (
@@ -735,19 +1017,21 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
                               </CommandItem>
                             )
                           })}
-                          {tagSearch.trim() !== "" && !availableTags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) && (
+                        </CommandGroup>
+                        {tagSearch.trim() !== "" && !availableTags.find(t => t.name.toLowerCase() === tagSearch.toLowerCase()) && (
+                          <CommandGroup heading="Nuevo">
                             <CommandItem
-                              value={`Crear ${tagSearch}`}
+                              value={`crear-${tagSearch}`}
                               onSelect={() => {
                                 handleCreateTag(tagSearch)
                                 setOpenTags(false)
                               }}
-                              className="text-primary font-medium border-t rounded-none"
+                              className="text-primary font-medium"
                             >
                               <Plus className="mr-2 h-4 w-4" /> Crear "{tagSearch}"
                             </CommandItem>
-                          )}
-                        </CommandGroup>
+                          </CommandGroup>
+                        )}
                       </CommandList>
                     </Command>
                   </PopoverContent>
@@ -885,14 +1169,18 @@ export function NewsForm({ categories, tags, initialData }: NewsFormProps) {
                     <div className="flex items-center gap-3 mb-6">
                       <div className="h-6 w-1 bg-primary rounded-full" />
                       <h3 className="text-xl font-bold flex items-center gap-2">
-                        <ImageIcon className="h-5 w-5 text-primary" /> Galería de Imágenes
+                        <ImageIcon className="h-5 w-5 text-primary" /> Galería
                       </h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {formData.images.map((img: any, i: number) => (
                         <figure key={i}>
                           <div className="relative aspect-video rounded-lg overflow-hidden border shadow-sm bg-muted">
-                            <img src={img.url} className="w-full h-full object-cover" alt={img.caption || "Gallery"} />
+                            {isVideoUrl(img.url) ? (
+                              <video src={img.url} controls playsInline preload="metadata" className="h-full w-full bg-black object-contain" />
+                            ) : (
+                              <img src={img.url} className="w-full h-full object-cover" alt={img.caption || "Gallery"} />
+                            )}
                           </div>
                           {img.caption && (
                             <figcaption className="text-sm text-muted-foreground italic mt-2 text-center">{img.caption}</figcaption>

@@ -14,6 +14,9 @@ import { fetchApi } from "@/lib/api-client"
 import { notFound } from "next/navigation"
 import { StickyArticleHeader } from "@/components/sticky-article-header"
 import { AdBanner } from "@/components/ad-banner"
+import { parseImageCaption } from "@/lib/utils-images"
+import { cn } from "@/lib/utils"
+import { GalleryCarousel } from "@/components/gallery-carousel"
 
 
 export async function generateStaticParams() {
@@ -36,6 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   try {
     const response = await fetchApi(`/news/${slug}`, {
+      // @ts-ignore
       next: { tags: [`news-${slug}`], revalidate: 3600 }
     });
     const article = response.data;
@@ -83,6 +87,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
   try {
     const response = await fetchApi(`/news/${slug}`, {
+      // @ts-ignore
       next: { tags: [`news-${slug}`], revalidate: 0 }
     });
     article = response.data;
@@ -128,6 +133,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   };
 
   /**
+   * Limpia el texto de espacios no divisibles que impiden el salto de línea.
+   */
+  const cleanText = (text: string): string => {
+    if (!text) return ""
+    return text
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\u00A0/g, ' ')
+      .replace(/\u200B/g, ''); // Quitar zero-width spaces por las dudas
+  }
+
+  /**
    * Normaliza el contenido del artículo para asegurar que siempre se muestre
    * con párrafos correctos, independientemente de cómo fue ingresado.
    * - Si ya tiene etiquetas HTML (ej: <p>, <br>, <h2>), lo devuelve tal cual.
@@ -139,13 +155,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     // REPARACIÓN CRÍTICA: Los textos pegados desde PDF a veces traen "espacios no divisibles" (&nbsp; o \u00A0).
     // Esto engaña al navegador haciéndole creer que todo el párrafo es UNA SOLA palabra gigante.
     // Reemplazamos estos espacios invisibles problemáticos por espacios estándar.
-    let cleanContent = content
-      .replace(/&nbsp;/g, ' ')
-      .replace(/\u00A0/g, ' ')
-      .replace(/\u200B/g, ''); // Quitar zero-width spaces por las dudas
+    let cleanContent = cleanText(content);
 
     // Si el contenido ya tiene etiquetas HTML de bloque, renderizarlo directamente
-    const hasBlockHtml = /<(p|br|h[1-6]|ul|ol|li|blockquote|div|table)\b/i.test(cleanContent)
+    const hasBlockHtml = /<(p|br|h[1-6]|ul|ol|li|blockquote|div|table|video|iframe|img)\b/i.test(cleanContent)
     if (hasBlockHtml) return cleanContent
 
     // Si es texto plano, convertir saltos de línea en párrafos <p>
@@ -171,11 +184,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     category: article.category?.name || "Actualidad",
   })
 
+  const mainImageMeta = parseImageCaption(article.mainImageCaption);
+
   return (
     <div className="min-h-screen bg-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <StickyArticleHeader title={article.title} category={article.category?.name || "Actualidad"} />
+      <StickyArticleHeader title={cleanText(article.title)} category={article.category?.name || "Actualidad"} />
       <Header />
 
       <main className="container mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">
@@ -201,17 +216,22 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           {/* Contenido principal */}
           <article className="lg:col-span-8 w-full min-w-0 overflow-x-hidden" lang="es">
             {/* Header del artículo */}
-            <div className="mb-8">
+            <div className="mb-10 max-w-4xl">
               {article.category && (
-                <Badge variant="default" className="mb-4 bg-primary text-primary-foreground">
-                  {article.category.name}
-                </Badge>
+                <div className="flex items-center gap-2 mb-6">
+                   <div className="w-1.5 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
+                   <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">
+                    {article.category.name}
+                   </span>
+                </div>
               )}
-              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-pretty leading-tight">
-                {article.title}
+              <h1 className="font-serif text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight mb-8 text-pretty leading-[1.15] text-foreground">
+                {cleanText(article.title)}
               </h1>
               {article.excerpt && (
-                <p className="text-xl text-muted-foreground leading-relaxed mb-8 text-pretty">{article.excerpt}</p>
+                <p className="text-xl md:text-2xl text-muted-foreground/90 leading-relaxed mb-8 text-pretty font-light tracking-tight border-l-2 border-primary/20 pl-6 italic">
+                  {cleanText(article.excerpt)}
+                </p>
               )}
 
               {/* Metadata */}
@@ -245,27 +265,46 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             {/* Imagen principal */}
             {(article.mainImageUrl) && (
               <figure className="mb-10">
-                <div className="relative aspect-[16/9] overflow-hidden rounded-lg border border-border">
+                <div 
+                  className={cn(
+                    "relative overflow-hidden rounded-lg border border-border bg-muted flex items-center justify-center w-full",
+                    mainImageMeta.fitMode === 'contain' ? "aspect-auto max-h-[500px] md:max-h-[650px]" : ""
+                  )}
+                  style={{ 
+                    aspectRatio: mainImageMeta.fitMode === 'contain' ? 'auto' : (mainImageMeta.aspectRatio || '16/9') 
+                  }}
+                >
                   <Image
                     src={article.mainImageUrl}
-                    alt={article.mainImageCaption || article.title}
-                    fill
-                    className="object-cover"
+                    alt={mainImageMeta.cleanCaption || article.title}
+                    fill={mainImageMeta.fitMode !== 'contain'}
+                    width={mainImageMeta.fitMode === 'contain' ? 1200 : undefined}
+                    height={mainImageMeta.fitMode === 'contain' ? 800 : undefined}
+                    className={cn(
+                      "transition-all duration-500",
+                      mainImageMeta.fitMode === 'contain' ? "w-auto h-auto max-h-[500px] md:max-h-[650px] object-contain" : "object-cover"
+                    )}
+                    style={{ 
+                      objectPosition: mainImageMeta.fitMode === 'contain' ? 'center' : mainImageMeta.position 
+                    }}
+                    priority
                   />
                 </div>
-                {article.mainImageCaption && (
+                {mainImageMeta.cleanCaption && (
                   <figcaption className="text-sm text-muted-foreground italic mt-3 text-center px-4">
-                    {article.mainImageCaption}
+                    {mainImageMeta.cleanCaption}
                   </figcaption>
                 )}
               </figure>
             )}
 
-            {/* Contenido del artículo Premium Typography */}
-            <div
-              className="prose prose-lg md:prose-xl max-w-none dark:prose-invert prose-slate prose-headings:font-serif prose-headings:font-bold prose-p:leading-relaxed prose-img:rounded-lg article-content"
-              dangerouslySetInnerHTML={{ __html: normalizeContent(article.content) }}
-            />
+            {/* Contenido del artículo Premium Typography - Limited width for ergonomics */}
+            <div className="max-w-[40rem] mx-auto lg:mx-0">
+              <div
+                className="prose max-w-none dark:prose-invert prose-headings:font-bold prose-img:rounded-3xl prose-img:max-h-[500px] md:prose-img:max-h-[650px] prose-img:w-auto prose-img:mx-auto prose-img:shadow-2xl prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:p-6 prose-blockquote:rounded-r-xl article-content"
+                dangerouslySetInnerHTML={{ __html: normalizeContent(article.content) }}
+              />
+            </div>
 
             {/* Ad in content */}
             <div className="my-10 w-full">
@@ -275,32 +314,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             {/* Galería de Imágenes Premium */}
             {article.images && article?.images?.length > 0 && (
               <div className="mt-16 pt-12 border-t border-border/50">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="h-8 w-1 bg-primary rounded-full" />
-                  <h3 className="font-serif text-3xl font-bold flex items-center gap-2">
-                    <ImageIcon className="h-6 w-6 text-primary" /> Galería de Imágenes (v2)
+                <div className="flex items-center gap-3 mb-10">
+                  <div className="h-8 w-1 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
+                  <h3 className="font-serif text-3xl md:text-4xl font-bold flex items-center gap-3 tracking-tight">
+                    <ImageIcon className="h-7 w-7 text-primary" /> Galería
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {article.images.map((img: any, i: number) => (
-                    <figure key={i}>
-                      <div className="group relative overflow-hidden rounded-xl border border-border bg-muted aspect-video shadow-sm hover:shadow-xl transition-all duration-500">
-                        <Image
-                          src={img.url}
-                          alt={img.caption || `Galería ${i + 1}`}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-700"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      </div>
-                      {img.caption && (
-                        <figcaption className="text-sm text-muted-foreground italic mt-3 text-center px-2">
-                          {img.caption}
-                        </figcaption>
-                      )}
-                    </figure>
-                  ))}
-                </div>
+                
+                <GalleryCarousel images={article.images} />
               </div>
             )}
 

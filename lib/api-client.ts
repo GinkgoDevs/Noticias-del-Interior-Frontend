@@ -75,3 +75,41 @@ export async function fetchApi(endpoint: string, options: FetchOptions = {}) {
         throw error;
     }
 }
+
+function readClientToken() {
+    if (typeof window === 'undefined') return undefined
+
+    let token = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('token='))
+        ?.split('=')[1]
+
+    if (!token || token === 'undefined') {
+        token = localStorage.getItem('token') || undefined
+    }
+
+    return token === 'undefined' ? undefined : token
+}
+
+/** Sube una imagen o un video directo al API, sin pasar por el límite del server action. */
+export async function uploadFile(file: File): Promise<{ url: string; publicId: string; resourceType: string }> {
+    const token = readClientToken()
+    const body = new FormData()
+    body.append('file', file)
+
+    const headers: Record<string, string> = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    const response = await fetch(`${API_URL}/upload`, {
+        method: 'POST',
+        headers,
+        body,
+    })
+
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok || result.success === false) {
+        throw new Error(result.message || 'No se pudo subir el archivo')
+    }
+
+    return result.data
+}
